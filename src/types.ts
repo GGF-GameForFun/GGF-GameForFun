@@ -15,6 +15,8 @@ export interface ServerConfig {
   backup_interval_minutes: number;
   backup_dir: string;
   backup_include_logs: boolean;
+  optimized_jvm_flags: boolean;
+  performance_preset: string;
 }
 
 export interface McVersion {
@@ -52,6 +54,15 @@ export interface ServerStats {
   players_online: number;
   players_max: number;
   uptime_seconds: number;
+}
+
+export interface BannedPlayer {
+  name: string;
+  uuid: string;
+  created: string;
+  source: string;
+  expires: string;
+  reason: string;
 }
 
 export interface ServerTypeMeta {

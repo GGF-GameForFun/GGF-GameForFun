@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { useT } from "../i18n";
 
 const STORAGE_KEY = "mchost.creditDismissed";
 
 export default function CreditPopup() {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -20,7 +22,7 @@ export default function CreditPopup() {
   return (
     <div
       role="dialog"
-      aria-label="Credit"
+      aria-label={t("credit.to")}
       onClick={close}
       style={{
         position: "fixed", inset: 0, zIndex: 9999,
@@ -46,7 +48,7 @@ export default function CreditPopup() {
       >
         <button
           onClick={close}
-          aria-label="Close"
+          aria-label={t("common.close")}
           style={{
             position: "absolute",
             top: 8, right: 8,
@@ -66,7 +68,7 @@ export default function CreditPopup() {
 
         <div style={{ fontSize: 36, marginBottom: 12 }}>⛏</div>
         <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 4 }}>
-          Credit to
+          {t("credit.to")}
         </div>
         <div
           style={{
@@ -79,11 +81,11 @@ export default function CreditPopup() {
           Aindrew
         </div>
         <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 20 }}>
-          aka Aingker
+          {t("credit.aka")}
         </div>
 
         <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }} onClick={close}>
-          Close
+          {t("common.close")}
         </button>
       </div>
     </div>

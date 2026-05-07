@@ -16,7 +16,7 @@ const EMPTY_STATS: ServerStats = {
   players_online: 0, players_max: 0, uptime_seconds: 0,
 };
 
-const TPS_SUPPORTED: ServerType[] = ["paper", "forge", "neoforge"];
+const TPS_SUPPORTED: ServerType[] = ["vanilla", "paper", "forge", "fabric", "neoforge"];
 
 export default function Dashboard({ config }: Props) {
   const { t } = useT();

@@ -51,6 +51,16 @@ pub struct PregenState {
     pub cancel_requested: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BannedPlayer {
+    pub name: String,
+    pub uuid: String,
+    pub created: String,
+    pub source: String,
+    pub expires: String,
+    pub reason: String,
+}
+
 const RECENT_PLAYERS_CAP: usize = 20;
 
 /// Window in which we count restarts (5 minutes), and the max we allow.
@@ -62,6 +72,75 @@ async fn push_console_line(state: &AppState, line: String) {
     let mut buf = state.console_buffer.lock().await;
     if buf.len() >= CONSOLE_BUFFER_CAP { buf.pop_front(); }
     buf.push_back(line);
+}
+
+fn optimized_jvm_flags() -> &'static [&'static str] {
+    &[
+        "-XX:+UseG1GC",
+        "-XX:+ParallelRefProcEnabled",
+        "-XX:MaxGCPauseMillis=200",
+        "-XX:+UnlockExperimentalVMOptions",
+        "-XX:+DisableExplicitGC",
+        "-XX:+AlwaysPreTouch",
+        "-XX:G1NewSizePercent=30",
+        "-XX:G1MaxNewSizePercent=40",
+        "-XX:G1HeapRegionSize=8M",
+        "-XX:G1ReservePercent=20",
+        "-XX:G1HeapWastePercent=5",
+        "-XX:G1MixedGCCountTarget=4",
+        "-XX:InitiatingHeapOccupancyPercent=15",
+        "-XX:G1MixedGCLiveThresholdPercent=90",
+        "-XX:G1RSetUpdatingPauseTimePercent=5",
+        "-XX:SurvivorRatio=32",
+        "-XX:+PerfDisableSharedMem",
+        "-XX:MaxTenuringThreshold=1",
+    ]
+}
+
+fn upsert_managed_jvm_args(server_dir: &Path, cfg: &ServerConfig) -> Result<(), String> {
+    let path = server_dir.join("user_jvm_args.txt");
+    let existing = std::fs::read_to_string(&path).unwrap_or_default();
+    let start = "# GameForFun managed JVM flags - start";
+    let end = "# GameForFun managed JVM flags - end";
+
+    let mut kept = Vec::new();
+    let mut skipping = false;
+    for line in existing.lines() {
+        if line.trim() == start {
+            skipping = true;
+            continue;
+        }
+        if line.trim() == end {
+            skipping = false;
+            continue;
+        }
+        if !skipping {
+            kept.push(line.to_string());
+        }
+    }
+
+    let mut managed = vec![
+        start.to_string(),
+        format!("-Xmx{}M", cfg.ram_mb),
+        format!("-Xms{}M", (cfg.ram_mb / 2).max(512)),
+    ];
+    if cfg.optimized_jvm_flags {
+        managed.extend(optimized_jvm_flags().iter().map(|s| s.to_string()));
+    }
+    managed.push(end.to_string());
+
+    while kept.last().is_some_and(|line| line.trim().is_empty()) {
+        kept.pop();
+    }
+    let mut output = managed.join("\n");
+    if !kept.is_empty() {
+        output.push_str("\n\n");
+        output.push_str(&kept.join("\n"));
+    }
+    output.push('\n');
+
+    std::fs::write(&path, output)
+        .map_err(|e| format!("Failed to write {}: {}", path.display(), e))
 }
 
 /// Parse a player name out of a "joined the game" / "left the game" / "lost connection" line.
@@ -429,11 +508,17 @@ async fn install_server(app: AppHandle, mut cfg: ServerConfig) -> Result<ServerC
     // Common files
     tokio::fs::write(server_dir.join("eula.txt"), "eula=true\n").await
         .map_err(|e| e.to_string())?;
+    let (view_distance, simulation_distance) = match cfg.performance_preset.as_str() {
+        "low_cpu" => (6, 4),
+        "heavy_modpack" => (8, 5),
+        "max_performance" => (10, 8),
+        _ => (8, 6),
+    };
     tokio::fs::write(
         server_dir.join("server.properties"),
         format!(
-            "online-mode=false\nmax-players={}\nmotd={}\nserver-port=25565\n",
-            cfg.max_players, cfg.server_name
+            "online-mode=false\nmax-players={}\nmotd={}\nserver-port=25565\nview-distance={}\nsimulation-distance={}\n",
+            cfg.max_players, cfg.server_name, view_distance, simulation_distance
         ),
     ).await.map_err(|e| e.to_string())?;
 
@@ -565,6 +650,9 @@ async fn do_start_server(app: AppHandle) -> Result<(), String> {
 
     let server_dir = PathBuf::from(&cfg.server_path);
     let ram = cfg.ram_mb;
+    if matches!(cfg.server_type, ServerType::Forge | ServerType::NeoForge) {
+        upsert_managed_jvm_args(&server_dir, &cfg)?;
+    }
 
     // Pick the Java version that matches the Minecraft version (1.20.1 → 17, 1.21+ → 21, etc.)
     let required_major = java::required_java_for_mc(&cfg.minecraft_version);
@@ -615,11 +703,12 @@ async fn do_start_server(app: AppHandle) -> Result<(), String> {
         // Vanilla, Paper, Fabric all use a single server.jar
         _ => {
             let mut c = tokio::process::Command::new(&java_bin);
-            c.args([
-                &format!("-Xmx{}M", ram),
-                &format!("-Xms{}M", ram / 2),
-                "-jar", "server.jar", "nogui",
-            ]);
+            c.arg(format!("-Xmx{}M", ram));
+            c.arg(format!("-Xms{}M", (ram / 2).max(512)));
+            if cfg.optimized_jvm_flags {
+                c.args(optimized_jvm_flags());
+            }
+            c.args(["-jar", "server.jar", "nogui"]);
             c
         }
     };
@@ -943,6 +1032,71 @@ async fn get_online_players(state: State<'_, AppState>) -> Result<Vec<String>, S
 #[tauri::command]
 async fn get_recent_players(state: State<'_, AppState>) -> Result<Vec<(String, String)>, String> {
     Ok(state.recent_players.lock().await.iter().cloned().collect())
+}
+
+#[tauri::command]
+async fn get_banned_players() -> Result<Vec<BannedPlayer>, String> {
+    let cfg = config::load_config();
+    let path = PathBuf::from(&cfg.server_path).join("banned-players.json");
+    if !path.exists() {
+        return Ok(Vec::new());
+    }
+    let raw = tokio::fs::read_to_string(&path)
+        .await
+        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+    if raw.trim().is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut players: Vec<BannedPlayer> = serde_json::from_str(&raw)
+        .map_err(|e| format!("Failed to parse {}: {}", path.display(), e))?;
+    players.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    Ok(players)
+}
+
+#[tauri::command]
+async fn unban_player(name: String, state: State<'_, AppState>) -> Result<Vec<BannedPlayer>, String> {
+    let cfg = config::load_config();
+    let path = PathBuf::from(&cfg.server_path).join("banned-players.json");
+    let raw = if path.exists() {
+        tokio::fs::read_to_string(&path)
+            .await
+            .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?
+    } else {
+        "[]".to_string()
+    };
+
+    let mut players: Vec<BannedPlayer> = if raw.trim().is_empty() {
+        Vec::new()
+    } else {
+        serde_json::from_str(&raw)
+            .map_err(|e| format!("Failed to parse {}: {}", path.display(), e))?
+    };
+
+    let target = name.to_lowercase();
+    players.retain(|p| p.name.to_lowercase() != target);
+    players.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+
+    if let Some(parent) = path.parent() {
+        tokio::fs::create_dir_all(parent)
+            .await
+            .map_err(|e| format!("Failed to create {}: {}", parent.display(), e))?;
+    }
+    let json = serde_json::to_string_pretty(&players).map_err(|e| e.to_string())?;
+    tokio::fs::write(&path, format!("{}\n", json))
+        .await
+        .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
+
+    // If the server is running, also ask Minecraft to update its in-memory ban list.
+    // Editing banned-players.json handles stopped servers; `pardon` handles live servers.
+    let mut srv = state.server.lock().await;
+    if let Some(stdin) = &mut srv.stdin {
+        stdin
+            .write_all(format!("pardon {}\n", name).as_bytes())
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+
+    Ok(players)
 }
 
 #[tauri::command]
@@ -1616,7 +1770,7 @@ pub fn run() {
             fetch_forge_versions, fetch_fabric_versions, fetch_neoforge_versions,
             install_server, start_server, stop_server, restart_server,
             send_command, get_server_status, get_server_stats, get_online_players,
-            get_recent_players, get_console_buffer, clear_console_buffer,
+            get_recent_players, get_banned_players, unban_player, get_console_buffer, clear_console_buffer,
             list_mods, add_mod, remove_mod,
             get_server_properties, save_server_properties,
             setup_playit, start_playit, stop_playit, get_playit_status,

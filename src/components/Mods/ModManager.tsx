@@ -83,8 +83,8 @@ export default function ModManager() {
 
       <div
         style={{
-          background: "rgba(74,222,128,0.08)",
-          border: "1px solid rgba(74,222,128,0.35)",
+          background: "rgba(139,92,246,0.10)",
+          border: "1px solid rgba(139,92,246,0.35)",
           borderRadius: "var(--radius-sm)",
           padding: "10px 14px",
           color: "var(--accent)",
@@ -104,7 +104,7 @@ export default function ModManager() {
         onDrop={onDropFiles}
         style={{
           border: dragOver ? "1px solid var(--accent)" : "1px dashed var(--border)",
-          background: dragOver ? "rgba(74,222,128,0.08)" : "var(--surface2)",
+          background: dragOver ? "rgba(139,92,246,0.10)" : "var(--surface2)",
           borderRadius: "var(--radius-sm)",
           padding: "12px 14px",
           marginBottom: 16,
@@ -112,7 +112,7 @@ export default function ModManager() {
           color: dragOver ? "var(--accent)" : "var(--text-muted)",
         }}
       >
-        Drag and drop `.jar` files here to import
+        {t("mods.dropHint")}
       </div>
 
       {error && (

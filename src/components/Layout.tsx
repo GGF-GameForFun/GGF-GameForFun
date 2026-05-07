@@ -8,6 +8,7 @@ import ServerSettings from "./Settings/ServerSettings";
 import Tunnel from "./Tunnel/Tunnel";
 import Players from "./Players/Players";
 import InfoPopup from "./InfoPopup";
+import logo from "../assets/gameforfun-logo-ui.png";
 
 type Page = "dashboard" | "console" | "tunnel" | "players" | "mods" | "settings";
 
@@ -51,8 +52,26 @@ export default function Layout({ config, onConfigChange }: Props) {
             marginBottom: 8,
           }}
         >
-          <div style={{ fontSize: 18, fontWeight: 700, color: "var(--accent)" }}>
-            🎮 GameForFun
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <img
+              src={logo}
+              alt=""
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                objectFit: "cover",
+                boxShadow: "0 8px 22px rgba(139,92,246,0.35)",
+              }}
+            />
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: "var(--text)", lineHeight: 1 }}>
+                GameForFun
+              </div>
+              <div style={{ fontSize: 10, color: "var(--accent-2)", fontWeight: 700, marginTop: 3 }}>
+                {t("brand.subtitle")}
+              </div>
+            </div>
           </div>
           <a
             href="https://discord.gg/bF62psq97S"
@@ -116,7 +135,7 @@ export default function Layout({ config, onConfigChange }: Props) {
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.color = "var(--accent)";
-              e.currentTarget.style.borderColor = "rgba(74,222,128,0.4)";
+              e.currentTarget.style.borderColor = "rgba(139,92,246,0.5)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.color = "var(--text-muted)";
@@ -129,7 +148,6 @@ export default function Layout({ config, onConfigChange }: Props) {
 
         {/* Page content */}
         <main
-          key={page} // Re-mount triggers fade-in transition per tab change
           className="page-transition"
           style={{ flex: 1, overflow: "auto" }}
         >
@@ -178,7 +196,7 @@ function LanguageSelector({ locale, onChange }: { locale: Locale; onChange: (l: 
               fontSize: 12,
               fontWeight: active ? 600 : 500,
               background: active ? "var(--accent)" : "transparent",
-              color: active ? "#062b14" : "var(--text-muted)",
+              color: active ? "#080711" : "var(--text-muted)",
               border: "none",
               display: "inline-flex",
               alignItems: "center",

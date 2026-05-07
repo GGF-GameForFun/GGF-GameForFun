@@ -33,6 +33,9 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
     "common.loading": "Loading…",
     "common.retry": "Retry",
     "common.saved": "Saved",
+    "common.apply": "Apply",
+    "credit.to": "Credit to",
+    "credit.aka": "aka Aingker",
 
     // Sidebar / navigation
     "nav.dashboard": "Dashboard",
@@ -41,6 +44,7 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
     "nav.players": "Players",
     "nav.mods": "Mods",
     "nav.settings": "Settings",
+    "brand.subtitle": "Monkey Zoo Crew",
 
     // Top bar
     "topbar.language": "Language",
@@ -72,6 +76,7 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
     "console.title": "Console",
     "console.placeholder": "Server console output will appear here…",
     "console.commandPrompt": "Enter server command…",
+    "console.bufferNotice": "[GameForFun] Showing latest {visible} lines. {hidden} older lines are still saved in the backend buffer.",
 
     // Tunnel
     "tunnel.title": "playit.gg Tunnel",
@@ -98,6 +103,13 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
     "players.confirmDeop": "Remove operator privileges from {name}?",
     "players.ban": "Ban",
     "players.confirmBan": "Ban {name} from the server? They won't be able to rejoin.",
+    "players.bannedTitle": "Banned Players",
+    "players.bannedEmpty": "No players are banned.",
+    "players.bannedReason": "Reason",
+    "players.bannedBy": "By {source}",
+    "players.bannedOn": "Banned {date}",
+    "players.unban": "Unban",
+    "players.confirmUnban": "Unban {name} so they can join again?",
     "players.teleport": "Teleport",
     "players.teleportTo": "Teleport {name} to which player?",
     "players.teleportNeedTwo": "Need at least 2 players online to teleport",
@@ -115,6 +127,7 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
     "mods.add": "Add Mod",
     "mods.warnRunning": "ℹ Stop the server before adding or removing mods to avoid corruption.",
     "mods.loadingList": "Loading mods…",
+    "mods.dropHint": "Drag and drop .jar files here to import",
 
     // Settings
     "settings.title": "Settings",
@@ -141,6 +154,10 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
     "settings.noLoaderFound": "No {name} version found for Minecraft {mc}.",
     "settings.reinstalling": "Reinstalling…",
     "settings.reinstallButton": "Reinstall server",
+    "settings.fetchVersionsFailed": "Failed to fetch versions: {err}",
+    "settings.fetchLoadersFailed": "Failed to fetch loader versions: {err}",
+    "settings.unknownProperties": "Other Properties (raw)",
+    "settings.recommended": "Recommended",
 
     // Setup wizard
     "setup.welcomeTitle": "Welcome to GameForFun",
@@ -173,6 +190,8 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
     "setup.playitDesc": "playit.gg gives your server a public address without port forwarding.",
     "setup.playitDownloading": "Downloading playit.gg…",
     "setup.playitFailed": "⚠ playit.gg setup failed: {err}",
+    "setup.fetchVersionsFailed": "Failed to fetch versions: {err}. Check your internet connection and try again.",
+    "setup.fetchLoadersFailed": "Failed to fetch loader versions: {err}. Check your internet connection and try again.",
 
     // Tools (Backup / Debug Export)
     "tools.title": "Tools & Maintenance",
@@ -199,6 +218,17 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
     "settings.autoBackupDesc": "Automatically create a ZIP backup at a regular interval. Set to 0 to disable.",
     "settings.autoBackupInterval": "Interval (minutes)",
     "settings.autoBackupIncludeLogs": "Include logs in auto-backup",
+    "settings.performance": "Performance",
+    "settings.performanceDesc": "Recommended presets tune view distance, simulation distance, RAM behavior, and JVM garbage collection for smoother TPS.",
+    "settings.performancePreset": "Preset",
+    "settings.presetBalanced": "Balanced",
+    "settings.presetLowCpu": "Low CPU",
+    "settings.presetHeavyModpack": "Heavy Modpack",
+    "settings.presetMaxPerformance": "Max Performance",
+    "settings.jvmFlags": "Optimized JVM flags",
+    "settings.jvmFlagsDesc": "Uses Minecraft-focused G1GC flags to reduce CPU spikes and garbage collection pauses.",
+    "settings.applyPreset": "Apply recommended world settings",
+    "settings.presetHint": "Creative flying loads chunks aggressively. Low CPU lowers distance; Heavy Modpack keeps smoother TPS with more RAM.",
     "tools.pregen.title": "Pre-generate Chunks",
     "tools.pregen.desc": "Generate world chunks ahead of time so players don't experience lag when exploring new areas. Centered on world spawn (0, 0).",
     "tools.pregen.field": "Number of chunks",
@@ -246,6 +276,9 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
     "common.loading": "Đang tải…",
     "common.retry": "Thử lại",
     "common.saved": "Đã lưu",
+    "common.apply": "Dùng",
+    "credit.to": "Credit",
+    "credit.aka": "còn gọi là Aingker",
 
     "nav.dashboard": "Tổng quan",
     "nav.console": "Console",
@@ -253,6 +286,7 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
     "nav.players": "Người chơi",
     "nav.mods": "Mods",
     "nav.settings": "Cài đặt",
+    "brand.subtitle": "Một bầy khỉ trong sở thú",
 
     "topbar.language": "Ngôn ngữ",
     "topbar.info": "Thông tin",
@@ -281,6 +315,7 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
     "console.title": "Console",
     "console.placeholder": "Log của server sẽ hiển thị ở đây…",
     "console.commandPrompt": "Nhập lệnh server…",
+    "console.bufferNotice": "[GameForFun] Đang hiển thị {visible} dòng mới nhất. {hidden} dòng cũ hơn vẫn được lưu trong bộ nhớ backend.",
 
     "tunnel.title": "Tunnel playit.gg",
     "tunnel.active": "Tunnel đang hoạt động",
@@ -305,6 +340,13 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
     "players.confirmDeop": "Gỡ quyền OP của {name}?",
     "players.ban": "Ban",
     "players.confirmBan": "Ban {name} khỏi server? Người này sẽ không thể vào lại.",
+    "players.bannedTitle": "Người Chơi Bị Ban",
+    "players.bannedEmpty": "Chưa có người chơi nào bị ban.",
+    "players.bannedReason": "Lý do",
+    "players.bannedBy": "Bởi {source}",
+    "players.bannedOn": "Ban lúc {date}",
+    "players.unban": "Gỡ ban",
+    "players.confirmUnban": "Gỡ ban {name} để người này vào lại server?",
     "players.teleport": "Dịch chuyển",
     "players.teleportTo": "Dịch chuyển {name} tới người chơi nào?",
     "players.teleportNeedTwo": "Cần ít nhất 2 người chơi online để dịch chuyển",
@@ -321,6 +363,7 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
     "mods.add": "Thêm mod",
     "mods.warnRunning": "ℹ Hãy tắt server trước khi thêm/xoá mod để tránh hỏng dữ liệu.",
     "mods.loadingList": "Đang tải danh sách mods…",
+    "mods.dropHint": "Kéo và thả file .jar vào đây để import",
 
     "settings.title": "Cài đặt",
     "settings.serverName": "Tên server",
@@ -346,6 +389,10 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
     "settings.noLoaderFound": "Không tìm thấy phiên bản {name} cho Minecraft {mc}.",
     "settings.reinstalling": "Đang cài đặt lại…",
     "settings.reinstallButton": "Cài đặt lại server",
+    "settings.fetchVersionsFailed": "Tải danh sách phiên bản thất bại: {err}",
+    "settings.fetchLoadersFailed": "Tải danh sách loader thất bại: {err}",
+    "settings.unknownProperties": "Tùy chọn khác (raw)",
+    "settings.recommended": "Khuyên dùng",
 
     "setup.welcomeTitle": "Chào mừng đến với GameForFun",
     "setup.welcomeDesc": "Host server Minecraft cracked (Vanilla, Paper, Forge, Fabric hoặc NeoForge) qua tunnel playit.gg — không cần mở port router.",
@@ -377,6 +424,8 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
     "setup.playitDesc": "playit.gg cấp địa chỉ public cho server mà không cần mở port router.",
     "setup.playitDownloading": "Đang tải playit.gg…",
     "setup.playitFailed": "⚠ Cài đặt playit.gg thất bại: {err}",
+    "setup.fetchVersionsFailed": "Tải danh sách phiên bản thất bại: {err}. Kiểm tra kết nối mạng rồi thử lại.",
+    "setup.fetchLoadersFailed": "Tải danh sách loader thất bại: {err}. Kiểm tra kết nối mạng rồi thử lại.",
 
     "tools.title": "Công cụ & Bảo trì",
     "tools.backup.title": "Sao lưu server",
@@ -403,6 +452,17 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
     "settings.autoBackupDesc": "Tự động tạo backup ZIP theo chu kỳ. Đặt 0 để tắt.",
     "settings.autoBackupInterval": "Chu kỳ (phút)",
     "settings.autoBackupIncludeLogs": "Bao gồm logs trong auto-backup",
+    "settings.performance": "Hiệu năng",
+    "settings.performanceDesc": "Preset gợi ý sẽ tinh chỉnh view distance, simulation distance, RAM và JVM GC để TPS ổn định hơn.",
+    "settings.performancePreset": "Preset",
+    "settings.presetBalanced": "Cân bằng",
+    "settings.presetLowCpu": "Tiết kiệm CPU",
+    "settings.presetHeavyModpack": "Modpack nặng",
+    "settings.presetMaxPerformance": "Hiệu năng tối đa",
+    "settings.jvmFlags": "JVM flags tối ưu",
+    "settings.jvmFlagsDesc": "Dùng G1GC flags dành cho Minecraft để giảm CPU spike và pause do dọn RAM.",
+    "settings.applyPreset": "Áp dụng cấu hình world được khuyến nghị",
+    "settings.presetHint": "Bay creative tải chunk rất nhanh. Tiết kiệm CPU sẽ giảm khoảng nhìn; Modpack nặng giữ TPS ổn định hơn với RAM cao.",
     "tools.pregen.title": "Tạo Trước Chunk",
     "tools.pregen.desc": "Tạo trước chunk thế giới để người chơi không bị lag khi khám phá vùng mới. Tập trung quanh điểm spawn (0, 0).",
     "tools.pregen.field": "Số chunk muốn tạo",

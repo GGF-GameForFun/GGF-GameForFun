@@ -10,6 +10,8 @@ export default function Console() {
   const [histIdx, setHistIdx] = useState(-1);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const visibleLines = lines.length > 600 ? lines.slice(-600) : lines;
+  const hiddenCount = Math.max(0, lines.length - visibleLines.length);
 
   useEffect(() => {
     // Hydrate from backend buffer so history survives tab switches and component remounts
@@ -21,7 +23,7 @@ export default function Console() {
   }, []);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    bottomRef.current?.scrollIntoView({ behavior: "auto" });
   }, [lines]);
 
   function colorize(line: string): { color: string } {
@@ -119,11 +121,21 @@ export default function Console() {
             {t("console.placeholder")}
           </div>
         ) : (
-          lines.map((line, i) => (
-            <div key={i} style={colorize(line)}>
-              {line}
-            </div>
-          ))
+          <>
+            {hiddenCount > 0 && (
+              <div style={{ color: "var(--text-muted)", marginBottom: 8 }}>
+                {t("console.bufferNotice", {
+                  visible: String(visibleLines.length),
+                  hidden: String(hiddenCount),
+                })}
+              </div>
+            )}
+            {visibleLines.map((line, i) => (
+              <div key={`${hiddenCount}-${i}`} style={colorize(line)}>
+                {line}
+              </div>
+            ))}
+          </>
         )}
         <div ref={bottomRef} />
       </div>

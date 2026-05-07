@@ -15,6 +15,8 @@ const MOCK_CONFIG: ServerConfig = {
   backup_interval_minutes: 0,
   backup_dir: "",
   backup_include_logs: false,
+  optimized_jvm_flags: true,
+  performance_preset: "balanced",
 };
 
 const handlers: Record<string, (...args: unknown[]) => unknown> = {
@@ -52,6 +54,17 @@ const handlers: Record<string, (...args: unknown[]) => unknown> = {
   restart_server: () => undefined,
   send_command: () => undefined,
   get_recent_players: () => [["DemoPlayer1", new Date(Date.now() - 600_000).toISOString()]],
+  get_banned_players: () => [
+    {
+      name: "BadSteve",
+      uuid: "00000000-0000-0000-0000-000000000000",
+      created: new Date(Date.now() - 3_600_000).toISOString(),
+      source: "Server",
+      expires: "forever",
+      reason: "Banned by an operator.",
+    },
+  ],
+  unban_player: () => [],
   list_mods: () => ["EssentialsX-2.20.1.jar", "WorldEdit-7.3.0.jar"],
   add_mod: () => undefined,
   remove_mod: () => undefined,

@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 fn default_true() -> bool { true }
+fn default_performance_preset() -> String { "balanced".to_string() }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -43,6 +44,14 @@ pub struct ServerConfig {
     /// Whether auto-backups should include the logs/ folder.
     #[serde(default)]
     pub backup_include_logs: bool,
+    /// Use Minecraft-focused JVM flags to reduce GC pauses and CPU spikes.
+    /// Defaults to true because the standard Java defaults are weak for MC servers.
+    #[serde(default = "default_true")]
+    pub optimized_jvm_flags: bool,
+    /// UI-selected performance preset. The app uses this for defaults/hints; server.properties
+    /// still remains user-editable.
+    #[serde(default = "default_performance_preset")]
+    pub performance_preset: String,
 }
 
 pub fn config_path() -> PathBuf {

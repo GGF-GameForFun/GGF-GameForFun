@@ -21,7 +21,7 @@ export default function InfoPopup({ open, onClose }: Props) {
   if (!open) return null;
 
   return (
-    <div className="modal-backdrop" onClick={onClose} role="dialog" aria-label="About">
+    <div className="modal-backdrop" onClick={onClose} role="dialog" aria-label={t("topbar.info")}>
       <div
         className="modal"
         style={{
@@ -113,14 +113,14 @@ export default function InfoPopup({ open, onClose }: Props) {
             textDecoration: "none",
             fontFamily: "monospace",
             padding: "6px 12px",
-            background: "rgba(74,222,128,0.08)",
-            border: "1px solid rgba(74,222,128,0.25)",
+            background: "rgba(139,92,246,0.10)",
+            border: "1px solid rgba(139,92,246,0.30)",
             borderRadius: 999,
             marginBottom: 16,
             transition: "background 0.15s var(--easing)",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(74,222,128,0.18)")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(74,222,128,0.08)")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(139,92,246,0.20)")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(139,92,246,0.10)")}
         >
           💬 discord.gg/bF62psq97S
         </a>

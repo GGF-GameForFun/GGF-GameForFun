@@ -41,6 +41,8 @@ export default function SetupWizard({ onComplete }: Props) {
     backup_interval_minutes: 0,
     backup_dir: "",
     backup_include_logs: false,
+    optimized_jvm_flags: true,
+    performance_preset: "balanced",
   });
 
   const [progress, setProgress] = useState<InstallProgress>({ message: "", progress: 0 });
@@ -58,14 +60,14 @@ export default function SetupWizard({ onComplete }: Props) {
 
   const meta = SERVER_TYPES.find((t) => t.id === form.server_type)!;
 
-  async function pickType(t: ServerType) {
-    set("server_type", t);
+  async function pickType(serverType: ServerType) {
+    set("server_type", serverType);
     set("loader_version", null);
     setFetchError("");
     setLoadingVersions(true);
     setStep("version");
     try {
-      if (t === "paper") {
+      if (serverType === "paper") {
         const v = await invoke<string[]>("fetch_paper_versions");
         setPaperVersions(v);
         if (v.length > 0) set("minecraft_version", v[0]);
@@ -75,7 +77,7 @@ export default function SetupWizard({ onComplete }: Props) {
         if (v.length > 0) set("minecraft_version", v[0].id);
       }
     } catch (e) {
-      setFetchError(`Failed to fetch versions: ${String(e)}. Check your internet connection and try again.`);
+      setFetchError(t("setup.fetchVersionsFailed", { err: String(e) }));
     } finally {
       setLoadingVersions(false);
     }
@@ -98,7 +100,7 @@ export default function SetupWizard({ onComplete }: Props) {
       setLoaderVersions(v);
       if (v.length > 0) set("loader_version", v[0].version);
     } catch (e) {
-      setFetchError(`Failed to fetch loader versions: ${String(e)}. Check your internet connection and try again.`);
+      setFetchError(t("setup.fetchLoadersFailed", { err: String(e) }));
     } finally {
       setLoadingLoaders(false);
     }
@@ -308,7 +310,7 @@ export default function SetupWizard({ onComplete }: Props) {
             )}
 
             <div style={{ display: "flex", gap: 10 }}>
-              <button className="btn" onClick={() => setStep("version")}>← Back</button>
+              <button className="btn" onClick={() => setStep("version")}>← {t("common.back")}</button>
               <button
                 className="btn btn-primary"
                 style={{ flex: 1, justifyContent: "center" }}

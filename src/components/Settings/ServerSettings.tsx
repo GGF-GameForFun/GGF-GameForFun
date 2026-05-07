@@ -17,6 +17,17 @@ interface Props {
   onSave: (cfg: ServerConfig) => void;
 }
 
+const PERFORMANCE_PRESETS: Record<string, {
+  viewDistance: string;
+  simulationDistance: string;
+  ramFloorMb: number;
+}> = {
+  balanced: { viewDistance: "8", simulationDistance: "6", ramFloorMb: 4096 },
+  low_cpu: { viewDistance: "6", simulationDistance: "4", ramFloorMb: 3072 },
+  heavy_modpack: { viewDistance: "8", simulationDistance: "5", ramFloorMb: 8192 },
+  max_performance: { viewDistance: "10", simulationDistance: "8", ramFloorMb: 8192 },
+};
+
 export default function ServerSettings({ config, onSave }: Props) {
   const { t } = useT();
   const [form, setForm] = useState(config);
@@ -53,6 +64,20 @@ export default function ServerSettings({ config, onSave }: Props) {
     } catch (e) {
       setError(String(e));
     }
+  }
+
+  function applyPerformancePreset() {
+    const preset = PERFORMANCE_PRESETS[form.performance_preset] ?? PERFORMANCE_PRESETS.balanced;
+    setProps((p) => ({
+      ...p,
+      "view-distance": preset.viewDistance,
+      "simulation-distance": preset.simulationDistance,
+    }));
+    setForm((f) => ({
+      ...f,
+      optimized_jvm_flags: true,
+      ram_mb: Math.max(f.ram_mb, preset.ramFloorMb),
+    }));
   }
 
   // (KEY_PROPS list removed — replaced by PROPERTY_META in serverPropsMeta.ts)
@@ -185,6 +210,64 @@ export default function ServerSettings({ config, onSave }: Props) {
           </div>
         </div>
 
+        {/* Performance */}
+        <div
+          style={{
+            marginBottom: 14,
+            padding: "12px",
+            background: "linear-gradient(135deg, rgba(139,92,246,0.13), rgba(56,189,248,0.07))",
+            border: "1px solid rgba(139,92,246,0.26)",
+            borderRadius: "var(--radius-sm)",
+          }}
+        >
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
+            ⚡ {t("settings.performance")}
+          </div>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 10, lineHeight: 1.45 }}>
+            {t("settings.performanceDesc")}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 10 }}>
+            <div>
+              <div className="label">{t("settings.performancePreset")}</div>
+              <select
+                value={form.performance_preset}
+                onChange={(e) => setForm((f) => ({ ...f, performance_preset: e.target.value }))}
+                style={{ width: "100%" }}
+              >
+                <option value="balanced">{t("settings.presetBalanced")}</option>
+                <option value="low_cpu">{t("settings.presetLowCpu")}</option>
+                <option value="heavy_modpack">{t("settings.presetHeavyModpack")}</option>
+                <option value="max_performance">{t("settings.presetMaxPerformance")}</option>
+              </select>
+            </div>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginTop: 20,
+                cursor: "pointer",
+                fontSize: 12,
+                color: "var(--text-muted)",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={form.optimized_jvm_flags}
+                onChange={(e) => setForm((f) => ({ ...f, optimized_jvm_flags: e.target.checked }))}
+                style={{ width: "auto", padding: 0, margin: 0 }}
+              />
+              {t("settings.jvmFlags")}
+            </label>
+          </div>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.45, marginBottom: 10 }}>
+            {t("settings.jvmFlagsDesc")} {t("settings.presetHint")}
+          </div>
+          <button className="btn btn-sm" onClick={applyPerformancePreset}>
+            {t("settings.applyPreset")}
+          </button>
+        </div>
+
         <button className="btn btn-primary btn-sm" onClick={saveConfig}>
           {saved ? `✓ ${t("common.saved")}` : t("common.save")}
         </button>
@@ -252,7 +335,7 @@ function VersionChangeCard({
         if (v.length > 0 && !v.find((x) => x.id === mcVersion)) setMcVersion(v[0].id);
       }
     } catch (e) {
-      setFetchError(`Failed to fetch versions: ${String(e)}`);
+      setFetchError(t("settings.fetchVersionsFailed", { err: String(e) }));
     } finally {
       setLoadingVersions(false);
     }
@@ -277,7 +360,7 @@ function VersionChangeCard({
       setLoaderVersions(v);
       if (v.length > 0) setLoaderVersion(v[0].version);
     } catch (e) {
-      setFetchError(`Failed to fetch loader versions: ${String(e)}`);
+      setFetchError(t("settings.fetchLoadersFailed", { err: String(e) }));
     } finally {
       setLoadingLoaders(false);
     }
@@ -613,7 +696,7 @@ function PropertiesEditor({
             onClick={() => setShowRaw(!showRaw)}
             style={{ marginBottom: 12 }}
           >
-            {showRaw ? "▾" : "▸"} {locale === "vi" ? "Tùy chọn khác (raw)" : "Other Properties (raw)"} ({unknownKeys.length})
+            {showRaw ? "▾" : "▸"} {t("settings.unknownProperties")} ({unknownKeys.length})
           </button>
           {showRaw && (
             <div style={{ marginBottom: 14 }}>
@@ -665,7 +748,8 @@ function PropRow({
   locale: Locale;
 }) {
   const isRecommended = meta.recommended != null && value === meta.recommended;
-  const recommendedLabel = locale === "vi" ? "Khuyên dùng" : "Recommended";
+  const { t } = useT();
+  const recommendedLabel = t("settings.recommended");
 
   return (
     <div
@@ -711,11 +795,11 @@ function PropRow({
               style={{
                 marginLeft: 8, fontSize: 10, padding: "2px 8px",
                 background: "transparent", color: "var(--accent)",
-                border: "1px solid rgba(74,222,128,0.4)", borderRadius: 999,
+                border: "1px solid rgba(139,92,246,0.45)", borderRadius: 999,
                 cursor: "pointer",
               }}
             >
-              {locale === "vi" ? "Dùng" : "Apply"}
+              {t("common.apply")}
             </button>
           </div>
         )}
@@ -1081,7 +1165,7 @@ function ToolsSection() {
           marginTop: 12,
           padding: "8px 12px",
           fontSize: 12,
-          color: resultMsg.type === "ok" ? "var(--accent)" : "var(--red)",
+          color: resultMsg.type === "ok" ? "var(--green)" : "var(--red)",
           background: resultMsg.type === "ok" ? "rgba(74,222,128,0.08)" : "rgba(248,113,113,0.08)",
           border: `1px solid ${resultMsg.type === "ok" ? "rgba(74,222,128,0.4)" : "rgba(248,113,113,0.4)"}`,
           borderRadius: "var(--radius-sm)",

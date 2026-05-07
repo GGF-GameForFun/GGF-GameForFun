@@ -23,7 +23,7 @@ export interface RingMeterProps {
 }
 
 const TIER_COLORS: Record<Tier, string> = {
-  good:     "var(--accent)",
+  good:     "var(--green)",
   normal:   "var(--yellow)",
   critical: "var(--red)",
   na:       "var(--text-muted)",

@@ -79,7 +79,7 @@ export default function App() {
   if (loading) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}>
-        <div style={{ color: "var(--text-muted)" }}>Loading…</div>
+        <div style={{ color: "var(--text-muted)" }}>GameForFun…</div>
       </div>
     );
   }
@@ -118,7 +118,7 @@ function UpdateBanner({ info, onDismiss }: { info: UpdateInfo; onDismiss: () => 
         maxWidth: 360,
         padding: "12px 14px",
         background: "var(--surface)",
-        border: "1px solid rgba(74,222,128,0.5)",
+        border: "1px solid rgba(139,92,246,0.55)",
         borderRadius: "var(--radius)",
         boxShadow: "var(--shadow-lg)",
         animation: "fadeInUp 0.3s var(--easing)",

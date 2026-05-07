@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { invoke, listen } from "../../tauri";
-import { ServerStatus } from "../../types";
+import { BannedPlayer, ServerStatus } from "../../types";
 import { useT } from "../../i18n";
 
 interface Confirm {
@@ -14,6 +14,7 @@ export default function Players() {
   const { t } = useT();
   const [players, setPlayers] = useState<string[]>([]);
   const [recent, setRecent] = useState<RecentPlayer[]>([]);
+  const [banned, setBanned] = useState<BannedPlayer[]>([]);
   const [ops, setOps] = useState<Set<string>>(new Set());
   const [status, setStatus] = useState<ServerStatus>("stopped");
   const [confirm, setConfirm] = useState<Confirm | null>(null);
@@ -24,6 +25,7 @@ export default function Players() {
     // Hydrate from backend on mount so we don't miss players who joined before this tab opened
     invoke<string[]>("get_online_players").then((list) => setPlayers(list.sort())).catch(() => {});
     invoke<RecentPlayer[]>("get_recent_players").then(setRecent).catch(() => {});
+    refreshBanned();
 
     const u1 = listen<ServerStatus>("server-status", (e) => {
       setStatus(e.payload);
@@ -47,6 +49,15 @@ export default function Players() {
 
   async function send(cmd: string) {
     try { await invoke("send_command", { cmd }); } catch {}
+  }
+
+  async function refreshBanned() {
+    try {
+      const list = await invoke<BannedPlayer[]>("get_banned_players");
+      setBanned(list);
+    } catch {
+      setBanned([]);
+    }
   }
 
   function handleOp(name: string) {
@@ -80,6 +91,24 @@ export default function Players() {
       message: t("players.confirmBan", { name }),
       onYes: async () => {
         await send(`ban ${name}`);
+        setTimeout(refreshBanned, 500);
+        setConfirm(null);
+      },
+    });
+  }
+
+  function handleUnban(name: string) {
+    setConfirm({
+      message: t("players.confirmUnban", { name }),
+      onYes: async () => {
+        try {
+          const list = await invoke<BannedPlayer[]>("unban_player", { name });
+          setBanned(list);
+        } catch {
+          await send(`pardon ${name}`);
+          setBanned((list) => list.filter((p) => p.name !== name));
+          setTimeout(refreshBanned, 500);
+        }
         setConfirm(null);
       },
     });
@@ -98,6 +127,12 @@ export default function Players() {
     if (hrs < 24) return t("players.hoursAgo", { n: String(hrs) });
     const days = Math.floor(hrs / 24);
     return t("players.daysAgo", { n: String(days) });
+  }
+
+  function fmtDate(value: string): string {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value || "—";
+    return date.toLocaleString();
   }
 
   const offline = status === "stopped";
@@ -139,7 +174,7 @@ export default function Players() {
                       {isOp && (
                         <span style={{
                           marginLeft: 8, fontSize: 10, fontWeight: 600,
-                          color: "var(--accent)", background: "rgba(74,222,128,0.15)",
+                          color: "var(--accent)", background: "rgba(139,92,246,0.16)",
                           padding: "2px 7px", borderRadius: 999, letterSpacing: 0.4,
                         }}>OP</span>
                       )}
@@ -147,7 +182,7 @@ export default function Players() {
                   </div>
                   <button
                     className="btn btn-sm"
-                    style={isOp ? { color: "var(--accent)", borderColor: "rgba(74,222,128,0.4)" } : {}}
+                    style={isOp ? { color: "var(--accent)", borderColor: "rgba(139,92,246,0.45)" } : {}}
                     onClick={() => handleOp(name)}
                   >
                     {isOp ? `✓ ${t("players.op")}` : t("players.op")}
@@ -205,7 +240,7 @@ export default function Players() {
                       {isOnline && (
                         <span style={{
                           marginLeft: 8, fontSize: 10, fontWeight: 600,
-                          color: "var(--accent)", background: "rgba(74,222,128,0.15)",
+                          color: "var(--accent)", background: "rgba(139,92,246,0.16)",
                           padding: "1px 6px", borderRadius: 999,
                         }}>● {t("common.online")}</span>
                       )}
@@ -220,6 +255,49 @@ export default function Players() {
           </div>
         </div>
       )}
+
+      {/* Banned Players */}
+      <div style={{ marginTop: 24 }}>
+        <div className="label" style={{ marginBottom: 10 }}>
+          🚫 {t("players.bannedTitle")}
+        </div>
+        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+          {banned.length === 0 ? (
+            <Empty>{t("players.bannedEmpty")}</Empty>
+          ) : (
+            banned.map((player, i) => (
+              <div
+                key={`${player.uuid}-${player.name}`}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "12px 16px",
+                  borderTop: i === 0 ? "none" : "1px solid var(--border)",
+                }}
+              >
+                <Avatar name={player.name} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{player.name}</div>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 3, lineHeight: 1.45 }}>
+                    {t("players.bannedOn", { date: fmtDate(player.created) })} ·{" "}
+                    {t("players.bannedBy", { source: player.source || "Server" })}
+                    {player.reason && (
+                      <>
+                        <br />
+                        {t("players.bannedReason")}: {player.reason}
+                      </>
+                    )}
+                  </div>
+                </div>
+                <button className="btn btn-sm" onClick={() => handleUnban(player.name)}>
+                  {t("players.unban")}
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
 
       {/* Teleport destination picker */}
       {teleportFrom && (
