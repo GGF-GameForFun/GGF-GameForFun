@@ -8,6 +8,7 @@ export default function ModManager() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [removing, setRemoving] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   async function loadMods() {
     setLoading(true);
@@ -26,13 +27,36 @@ export default function ModManager() {
 
   async function addMod() {
     try {
-      const selected = await openFileDialog([{ name: "Forge Mod", extensions: ["jar"] }]);
-      if (selected) {
-        await invoke("add_mod", { filePath: selected });
-        loadMods();
-      }
+      const selected = await openFileDialog([{ name: "Forge Mod", extensions: ["jar"] }], true);
+      if (!selected) return;
+      const paths = Array.isArray(selected) ? selected : [selected];
+      await importMods(paths);
     } catch (e) {
       setError(String(e));
+    }
+  }
+
+  async function importMods(paths: string[]) {
+    const jarPaths = paths.filter((p) => p.toLowerCase().endsWith(".jar"));
+    if (jarPaths.length === 0) return;
+    for (const filePath of jarPaths) {
+      await invoke("add_mod", { filePath });
+    }
+    loadMods();
+  }
+
+  async function onDropFiles(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setDragOver(false);
+    const files = Array.from(e.dataTransfer.files);
+    const paths = files
+      .map((f) => (f as File & { path?: string }).path)
+      .filter((p): p is string => !!p);
+    if (paths.length === 0) return;
+    try {
+      await importMods(paths);
+    } catch (err) {
+      setError(String(err));
     }
   }
 
@@ -69,6 +93,26 @@ export default function ModManager() {
         }}
       >
         {t("mods.warnRunning")}
+      </div>
+
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={onDropFiles}
+        style={{
+          border: dragOver ? "1px solid var(--accent)" : "1px dashed var(--border)",
+          background: dragOver ? "rgba(74,222,128,0.08)" : "var(--surface2)",
+          borderRadius: "var(--radius-sm)",
+          padding: "12px 14px",
+          marginBottom: 16,
+          fontSize: 12,
+          color: dragOver ? "var(--accent)" : "var(--text-muted)",
+        }}
+      >
+        Drag and drop `.jar` files here to import
       </div>
 
       {error && (

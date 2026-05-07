@@ -2,6 +2,8 @@
 
 🌐 [Tiếng Việt](./README_VI.md) | English
 
+**Current small update: `v0.1.1v2`**
+
 A lightweight desktop app for hosting Minecraft servers — Vanilla, Paper, Forge, Fabric, and NeoForge — with built-in [playit.gg](https://playit.gg) tunneling so your friends can join without any router setup or port forwarding.
 
 > Built by **Aingker** · [Discord Community](https://discord.gg/bF62psq97S)
@@ -92,8 +94,30 @@ Double-click it, drag **GameForFun** into your Applications folder, and launch i
 4. Set server name, install path, and RAM allocation
 5. Hit **Install** — the app downloads everything automatically
 6. Once done, click **▶ Start** on the Dashboard
-7. Go to the **Tunnel** tab → **▶ Start** → click the claim URL → set up your playit.gg tunnel
-8. Share the `xxxxx.joinmc.link:NNNNN` address with your friends — they paste it directly into Minecraft's Add Server screen
+7. Go to the **Tunnel** tab and click **▶ Start**
+8. If you see a **claim link**, click it and log in on the playit.gg page
+9. On playit.gg, create a **Minecraft Java** tunnel and set local port to `25565` (or your server port)
+10. Return to GameForFun and wait until the tunnel card shows your public address
+11. Share that address with friends (`domain:port` if port is shown)
+
+## 🌐 playit.gg Quick Guide (Important)
+
+Many users miss one of these steps, so the tunnel connects but friends still cannot join.
+
+1. Start your Minecraft server first (Dashboard must show **Online**).
+2. Open **Tunnel** tab and start playit agent.
+3. Complete the claim URL if prompted.
+4. In playit dashboard, ensure tunnel type is **Minecraft Java (TCP)**.
+5. Local address should point to your server machine and port (`127.0.0.1:25565` or your LAN IP + server port).
+6. Wait for GameForFun to show tunnel address card.
+7. If address does not appear yet, keep the Tunnel tab open for a bit after claiming.
+
+If friends cannot connect:
+
+1. Confirm server is running and not crashed.
+2. Confirm tunnel local port matches `server-port` in `server.properties`.
+3. Try direct `IP:PORT` from playit dashboard.
+4. Stop/start Tunnel once.
 
 ---
 

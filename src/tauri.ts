@@ -11,11 +11,15 @@ export async function invoke<T>(cmd: string, args?: Record<string, unknown>): Pr
   return mockInvoke(cmd, args) as Promise<T>;
 }
 
-export async function openFileDialog(filters: { name: string; extensions: string[] }[]): Promise<string | null> {
+export async function openFileDialog(
+  filters: { name: string; extensions: string[] }[],
+  multiple = false
+): Promise<string | string[] | null> {
   if (isTauri) {
     const { open } = await import("@tauri-apps/plugin-dialog");
-    const result = await open({ multiple: false, filters });
-    return typeof result === "string" ? result : null;
+    const result = await open({ multiple, filters });
+    if (typeof result === "string" || Array.isArray(result)) return result;
+    return null;
   }
   return null;
 }

@@ -6,7 +6,7 @@ const CONSOLE_BUFFER_CAP: usize = 2000;
 
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::sync::Mutex;
 
@@ -33,7 +33,25 @@ pub struct AppState {
     pub console_buffer: Mutex<VecDeque<String>>,
     /// Timestamps of recent auto-restarts. Used to detect crash loops.
     pub recent_auto_restarts: Mutex<VecDeque<std::time::Instant>>,
+    /// Recently joined players (most recent first), capped at RECENT_PLAYERS_CAP.
+    /// Each entry: (name, ISO 8601 join timestamp).
+    pub recent_players: Mutex<VecDeque<(String, String)>>,
+    /// Last sampled (in-game tick count, real-time instant) for gametime-based
+    /// TPS estimation on Vanilla/Fabric servers (which lack a built-in TPS cmd).
+    pub last_gametime_sample: Mutex<Option<(u64, std::time::Instant)>>,
+    /// State of the in-progress chunk pre-generation, if any.
+    pub pregen: Mutex<PregenState>,
 }
+
+#[derive(Default, Clone, Serialize)]
+pub struct PregenState {
+    pub running: bool,
+    pub total: u32,
+    pub completed: u32,
+    pub cancel_requested: bool,
+}
+
+const RECENT_PLAYERS_CAP: usize = 20;
 
 /// Window in which we count restarts (5 minutes), and the max we allow.
 /// Beyond this, we consider it a crash loop and stop restarting.
@@ -653,16 +671,47 @@ async fn do_start_server(app: AppHandle) -> Result<(), String> {
                 st.tps = tps;
                 app3.emit("server-stats", st.clone()).ok();
             }
+            // Gametime-based TPS for Vanilla/Fabric: response to `time query gametime`
+            // Format: "...]: The time is 12345"
+            if let Some(tick) = parse_gametime_line(&line) {
+                let s = app3.state::<AppState>();
+                let now = std::time::Instant::now();
+                let mut last = s.last_gametime_sample.lock().await;
+                if let Some((prev_tick, prev_inst)) = *last {
+                    let elapsed_secs = now.duration_since(prev_inst).as_secs_f32();
+                    let tick_delta = tick.saturating_sub(prev_tick) as f32;
+                    if elapsed_secs > 0.5 && tick_delta >= 0.0 {
+                        // 20 ticks per second is "perfect" TPS
+                        let tps = (tick_delta / elapsed_secs).clamp(0.0, 20.0);
+                        let mut st = s.stats.lock().await;
+                        st.tps = tps;
+                        app3.emit("server-stats", st.clone()).ok();
+                    }
+                }
+                *last = Some((tick, now));
+            }
 
             // Player join/leave parsing — vanilla, paper, forge, fabric all use same format
             if let Some((name, is_join)) = parse_player_event(&line) {
                 let s = app3.state::<AppState>();
                 let mut players = s.online_players.lock().await;
-                if is_join { players.insert(name); }
+                if is_join { players.insert(name.clone()); }
                 else       { players.remove(&name); }
                 let list: Vec<String> = players.iter().cloned().collect();
                 let count = players.len() as u32;
                 drop(players);
+
+                if is_join {
+                    // Track in recent-joins history (move to top if already present)
+                    let mut recent = s.recent_players.lock().await;
+                    recent.retain(|(n, _)| n != &name);
+                    let ts = chrono::Utc::now().to_rfc3339();
+                    recent.push_front((name.clone(), ts));
+                    while recent.len() > RECENT_PLAYERS_CAP { recent.pop_back(); }
+                    let recent_list: Vec<(String, String)> = recent.iter().cloned().collect();
+                    drop(recent);
+                    app3.emit("recent-players-update", &recent_list).ok();
+                }
 
                 let mut st = s.stats.lock().await;
                 st.players_online = count;
@@ -797,12 +846,20 @@ async fn do_start_server(app: AppHandle) -> Result<(), String> {
         }
     });
 
-    // TPS query loop — every 10s, send the right `tps` command for this server type.
-    // Vanilla and Fabric servers don't have a built-in TPS command, so we skip them.
+    // Reset gametime tracker for the new run (used by Vanilla/Fabric TPS estimation)
+    {
+        let state = app.state::<AppState>();
+        *state.last_gametime_sample.lock().await = None;
+    }
+
+    // TPS query loop — every 10s, send a server-type-appropriate command.
+    //   Paper:           `tps`
+    //   Forge/NeoForge:  `forge tps`
+    //   Vanilla/Fabric:  `time query gametime` (we measure tick rate ourselves)
     let tps_cmd: Option<&'static str> = match cfg.server_type {
         ServerType::Paper => Some("tps\n"),
         ServerType::Forge | ServerType::NeoForge => Some("forge tps\n"),
-        _ => None,
+        ServerType::Vanilla | ServerType::Fabric => Some("time query gametime\n"),
     };
     if let Some(cmd_bytes) = tps_cmd {
         let app_tps = app.clone();
@@ -826,6 +883,15 @@ async fn do_start_server(app: AppHandle) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+/// Parse a "The time is N" log line that responds to `time query gametime`.
+/// Returns the in-game tick count.
+fn parse_gametime_line(line: &str) -> Option<u64> {
+    // Format: "[12:34:56] [Server thread/INFO]: The time is 12345"
+    let body = line.rsplit("]:").next()?.trim();
+    let rest = body.strip_prefix("The time is ")?;
+    rest.trim().parse().ok()
 }
 
 /// Parse a TPS value out of an MC log line.
@@ -872,6 +938,11 @@ async fn get_server_stats(state: State<'_, AppState>) -> Result<ServerStats, Str
 #[tauri::command]
 async fn get_online_players(state: State<'_, AppState>) -> Result<Vec<String>, String> {
     Ok(state.online_players.lock().await.iter().cloned().collect())
+}
+
+#[tauri::command]
+async fn get_recent_players(state: State<'_, AppState>) -> Result<Vec<(String, String)>, String> {
+    Ok(state.recent_players.lock().await.iter().cloned().collect())
 }
 
 #[tauri::command]
@@ -1094,12 +1165,12 @@ async fn start_playit(app: AppHandle, state: State<'_, AppState>) -> Result<(), 
     tokio::spawn(async move { child.wait().await.ok(); });
 
     // Poll the playit API for the tunnel address every few seconds.
-    // The CLI's --stdout mode never prints the address (only the TUI does),
-    // so we have to fetch it from api.playit.gg directly.
+    // The CLI's --stdout mode may not print a stable address in all builds,
+    // so we keep polling while the agent is running until an address is found.
     let app_poll = app;
     tokio::spawn(async move {
-        for _ in 0..40 { // ~2 minutes at 3s intervals
-            tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+        loop {
+            tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
             let s = app_poll.state::<AppState>();
             {
                 let pl = s.playit.lock().await;
@@ -1140,26 +1211,20 @@ async fn parse_playit_line(app: &AppHandle, line: &str) {
         }
     }
 
-    // Tunnel address: matches things like "xxxx.joinmc.link:25565", "...play.gg:25565",
-    // "tunnel.playit.gg:25565", or anything ending in :NNNN that looks like a host.
+    // Tunnel address: accept known playit domains and generic host:port tokens.
     for word in line.split(|c: char| c.is_whitespace() || c == '"' || c == '\'' || c == ',') {
         let w = word.trim_end_matches(|c: char| c == '.' || c == ')' || c == ']');
-        let is_tunnel_host = w.contains(".joinmc.link")
-            || w.contains(".play.gg")
-            || w.contains(".playit.gg");
-        if !is_tunnel_host { continue; }
-        // Must have a port
-        let last_colon = w.rfind(':');
-        if let Some(idx) = last_colon {
-            let port = &w[idx + 1..];
-            if port.parse::<u16>().is_ok() {
-                if pl.address.as_deref() != Some(w) {
-                    pl.address = Some(w.to_string());
-                    pl.claim_url = None; // hide the claim banner once we have an address
-                    updated = true;
-                }
-                break;
+        let Some(idx) = w.rfind(':') else { continue };
+        let host = &w[..idx];
+        let port = &w[idx + 1..];
+        let has_host = host.contains('.') || host.eq_ignore_ascii_case("localhost");
+        if has_host && port.parse::<u16>().is_ok() {
+            if pl.address.as_deref() != Some(w) {
+                pl.address = Some(w.to_string());
+                pl.claim_url = None; // hide the claim banner once we have an address
+                updated = true;
             }
+            break;
         }
     }
 
@@ -1255,6 +1320,184 @@ async fn create_backup(
     })
 }
 
+// ── Chunk pre-generation ─────────────────────────────────────────────────────
+//
+// Uses the vanilla `/forceload add` command in batches, which is supported by
+// Vanilla / Paper / Forge / Fabric / NeoForge. Each `forceload add` rectangle
+// is capped at 256 chunks by the server, so we split into 16x16 chunk batches.
+// After all batches finish (or if cancelled), we run `/forceload remove all`.
+
+#[tauri::command]
+async fn pregenerate_chunks(app: AppHandle, total_chunks: u32) -> Result<(), String> {
+    if total_chunks == 0 {
+        return Err("total_chunks must be > 0".to_string());
+    }
+    {
+        let state = app.state::<AppState>();
+        let srv = state.server.lock().await;
+        if srv.status != ServerStatus::Running {
+            return Err("Server must be running to pre-generate chunks".to_string());
+        }
+    }
+    {
+        let state = app.state::<AppState>();
+        let mut pg = state.pregen.lock().await;
+        if pg.running {
+            return Err("A pre-generation task is already running".to_string());
+        }
+        // Compute the side length of a square big enough for total_chunks.
+        // We always pick an odd side so it's centered on (0,0).
+        let mut side = (total_chunks as f64).sqrt().ceil() as u32;
+        if side % 2 == 0 { side += 1; }
+        let total = side * side;
+        *pg = PregenState { running: true, total, completed: 0, cancel_requested: false };
+        app.emit("pregen-update", pg.clone()).ok();
+    }
+
+    let app_task = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let result = run_pregen(&app_task, total_chunks).await;
+        let s = app_task.state::<AppState>();
+
+        // Cleanup: always remove forceloads to free server resources
+        {
+            let mut srv = s.server.lock().await;
+            if srv.status == ServerStatus::Running {
+                if let Some(stdin) = &mut srv.stdin {
+                    let _ = stdin.write_all(b"forceload remove all\n").await;
+                }
+            }
+        }
+
+        let final_msg = match result {
+            Ok(completed) => format!("[mchost] Pre-generation complete: {} chunks", completed),
+            Err(e) if e == "cancelled" => "[mchost] Pre-generation cancelled".to_string(),
+            Err(e) => format!("[mchost] Pre-generation failed: {}", e),
+        };
+        push_console_line(&s, final_msg.clone()).await;
+        app_task.emit("mc-line", &final_msg).ok();
+
+        let mut pg = s.pregen.lock().await;
+        pg.running = false;
+        pg.cancel_requested = false;
+        app_task.emit("pregen-update", pg.clone()).ok();
+    });
+
+    Ok(())
+}
+
+async fn run_pregen(app: &AppHandle, _requested_total: u32) -> Result<u32, String> {
+    let s = app.state::<AppState>();
+
+    // Read the planned total from state (we already computed the square side)
+    let total = { s.pregen.lock().await.total };
+    let side_len = (total as f64).sqrt() as u32;
+    let half = (side_len / 2) as i32;
+
+    // Generate batches of 16x16 chunks (256 chunks max per /forceload command)
+    const BATCH: i32 = 16;
+    let mut completed: u32 = 0;
+
+    let banner = format!(
+        "[mchost] Pre-generating {} chunks ({}x{} grid centered on spawn)…",
+        total, side_len, side_len
+    );
+    push_console_line(&s, banner.clone()).await;
+    app.emit("mc-line", &banner).ok();
+
+    let mut z = -half;
+    while z <= half {
+        let z_end = (z + BATCH - 1).min(half);
+        let mut x = -half;
+        while x <= half {
+            // Cancellation check
+            {
+                let pg = s.pregen.lock().await;
+                if pg.cancel_requested { return Err("cancelled".to_string()); }
+            }
+            // Check server still running
+            {
+                let srv = s.server.lock().await;
+                if srv.status != ServerStatus::Running {
+                    return Err("Server stopped during pre-generation".to_string());
+                }
+            }
+
+            let x_end = (x + BATCH - 1).min(half);
+            let cmd = format!("forceload add {} {} {} {}\n", x, z, x_end, z_end);
+            {
+                let mut srv = s.server.lock().await;
+                if let Some(stdin) = &mut srv.stdin {
+                    stdin.write_all(cmd.as_bytes()).await.map_err(|e| e.to_string())?;
+                }
+            }
+
+            // Wait for the server to actually generate these chunks. Roughly
+            // 100ms per chunk in this batch is conservative for typical hardware.
+            let batch_chunks =
+                ((x_end - x + 1) as u32) * ((z_end - z + 1) as u32);
+            tokio::time::sleep(std::time::Duration::from_millis(
+                (batch_chunks as u64 * 120).max(1500),
+            )).await;
+
+            completed += batch_chunks;
+            {
+                let mut pg = s.pregen.lock().await;
+                pg.completed = completed.min(total);
+                app.emit("pregen-update", pg.clone()).ok();
+            }
+
+            // Periodically clear forceloads in the middle of a long run so the
+            // server doesn't keep too many chunks loaded at once.
+            if completed % 1024 == 0 {
+                let mut srv = s.server.lock().await;
+                if let Some(stdin) = &mut srv.stdin {
+                    let _ = stdin.write_all(b"forceload remove all\n").await;
+                }
+            }
+
+            x += BATCH;
+        }
+        z += BATCH;
+    }
+
+    Ok(completed.min(total))
+}
+
+#[tauri::command]
+async fn cancel_pregenerate(state: State<'_, AppState>) -> Result<(), String> {
+    let mut pg = state.pregen.lock().await;
+    if pg.running {
+        pg.cancel_requested = true;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_pregen_state(state: State<'_, AppState>) -> Result<PregenState, String> {
+    Ok(state.pregen.lock().await.clone())
+}
+
+/// Force-quit the app from the frontend after the user confirms the close
+/// dialog (or after stopping the server).
+#[tauri::command]
+fn force_quit(window: tauri::WebviewWindow) -> Result<(), String> {
+    window.destroy().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn restore_backup(app: AppHandle, src: String) -> Result<u64, String> {
+    let cfg = config::load_config();
+    let server_path = PathBuf::from(&cfg.server_path);
+    let src_path = PathBuf::from(&src);
+    let app_clone = app.clone();
+    tokio::task::spawn_blocking(move || {
+        backup::restore_server_backup(&app_clone, &src_path, &server_path)
+    })
+    .await
+    .map_err(|e| format!("Restore task failed: {}", e))?
+}
+
 #[tauri::command]
 async fn export_debug(dest: String) -> Result<u64, String> {
     let cfg = config::load_config();
@@ -1271,6 +1514,77 @@ fn default_downloads_dir() -> String {
         .unwrap_or_else(|| PathBuf::from("."))
         .to_string_lossy()
         .to_string()
+}
+
+// ── Update checker ───────────────────────────────────────────────────────────
+
+#[derive(Debug, Serialize, Deserialize)]
+struct GithubRelease {
+    tag_name: String,
+    name: String,
+    html_url: String,
+    body: String,
+    prerelease: bool,
+    draft: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct UpdateInfo {
+    pub current_version: String,
+    pub latest_version: String,
+    pub update_available: bool,
+    pub release_name: String,
+    pub release_url: String,
+    pub release_notes: String,
+}
+
+#[tauri::command]
+async fn check_for_update() -> Result<UpdateInfo, String> {
+    let current = env!("CARGO_PKG_VERSION").to_string();
+    let client = reqwest::Client::builder()
+        .user_agent(format!("GameForFun/{}", current))
+        .timeout(std::time::Duration::from_secs(8))
+        .build()
+        .map_err(|e| e.to_string())?;
+    let releases: Vec<GithubRelease> = client
+        .get("https://api.github.com/repos/GGF-GameForFun/GGF-GameForFun/releases")
+        .send().await.map_err(|e| format!("Network error: {}", e))?
+        .json().await.map_err(|e| format!("Parse error: {}", e))?;
+
+    let latest = releases
+        .into_iter()
+        .find(|r| !r.draft && !r.prerelease)
+        .ok_or_else(|| "No releases found".to_string())?;
+    let latest_version = latest.tag_name.trim_start_matches('v').to_string();
+    let update_available = is_newer(&latest_version, &current);
+
+    Ok(UpdateInfo {
+        current_version: current,
+        latest_version,
+        update_available,
+        release_name: latest.name,
+        release_url: latest.html_url,
+        release_notes: latest.body,
+    })
+}
+
+/// Compare two semver-ish versions ("0.1.1" > "0.1.0"). Tolerant of suffixes.
+fn is_newer(candidate: &str, current: &str) -> bool {
+    let parse = |s: &str| -> Vec<u32> {
+        s.split(|c: char| !c.is_ascii_digit())
+            .filter(|t| !t.is_empty())
+            .filter_map(|t| t.parse().ok())
+            .collect()
+    };
+    let c = parse(candidate);
+    let n = parse(current);
+    for i in 0..c.len().max(n.len()) {
+        let a = c.get(i).copied().unwrap_or(0);
+        let b = n.get(i).copied().unwrap_or(0);
+        if a > b { return true; }
+        if a < b { return false; }
+    }
+    false
 }
 
 #[tauri::command]
@@ -1292,6 +1606,9 @@ pub fn run() {
             online_players: Mutex::new(HashSet::new()),
             console_buffer: Mutex::new(VecDeque::with_capacity(CONSOLE_BUFFER_CAP)),
             recent_auto_restarts: Mutex::new(VecDeque::new()),
+            recent_players: Mutex::new(VecDeque::with_capacity(RECENT_PLAYERS_CAP)),
+            last_gametime_sample: Mutex::new(None),
+            pregen: Mutex::new(PregenState::default()),
         })
         .invoke_handler(tauri::generate_handler![
             get_config, save_config, check_java,
@@ -1299,14 +1616,78 @@ pub fn run() {
             fetch_forge_versions, fetch_fabric_versions, fetch_neoforge_versions,
             install_server, start_server, stop_server, restart_server,
             send_command, get_server_status, get_server_stats, get_online_players,
-            get_console_buffer, clear_console_buffer,
+            get_recent_players, get_console_buffer, clear_console_buffer,
             list_mods, add_mod, remove_mod,
             get_server_properties, save_server_properties,
             setup_playit, start_playit, stop_playit, get_playit_status,
             open_server_folder, default_server_path, default_downloads_dir,
-            create_backup, export_debug,
+            create_backup, restore_backup, export_debug,
             default_backup_filename, default_debug_filename,
+            pregenerate_chunks, cancel_pregenerate, get_pregen_state,
+            check_for_update, force_quit,
         ])
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                // Always prevent the close — the frontend listens for
+                // "close-requested" and decides whether to confirm with the
+                // user (server running) or immediately call force_quit.
+                api.prevent_close();
+                window.emit("close-requested", ()).ok();
+            }
+        })
+        .setup(|app| {
+            // Auto-backup scheduler — wakes every minute and runs a backup
+            // when `backup_interval_minutes` minutes have elapsed since the
+            // last one. Runs for the lifetime of the app.
+            let app_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let mut last_backup = std::time::Instant::now();
+                loop {
+                    tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
+                    let cfg = config::load_config();
+                    if cfg.backup_interval_minutes == 0 { continue; }
+                    let interval =
+                        std::time::Duration::from_secs(cfg.backup_interval_minutes as u64 * 60);
+                    if last_backup.elapsed() < interval { continue; }
+                    if !cfg.setup_complete { continue; }
+
+                    // Resolve dest dir
+                    let dest_dir = if cfg.backup_dir.is_empty() {
+                        dirs::download_dir()
+                            .or_else(dirs::home_dir)
+                            .unwrap_or_else(|| PathBuf::from("."))
+                    } else {
+                        PathBuf::from(&cfg.backup_dir)
+                    };
+                    let dest = dest_dir.join(backup::default_backup_filename());
+                    let server_path = PathBuf::from(&cfg.server_path);
+                    let include_logs = cfg.backup_include_logs;
+                    let app_for_task = app_handle.clone();
+
+                    let result = tokio::task::spawn_blocking(move || {
+                        backup::create_server_backup(&app_for_task, &server_path, &dest, include_logs)
+                    })
+                    .await;
+
+                    let msg = match result {
+                        Ok(Ok((files, bytes))) => format!(
+                            "[mchost] Auto-backup created: {} files, {:.1} MB",
+                            files,
+                            bytes as f64 / 1024.0 / 1024.0
+                        ),
+                        Ok(Err(e)) => format!("[mchost] Auto-backup failed: {}", e),
+                        Err(e) => format!("[mchost] Auto-backup task panicked: {}", e),
+                    };
+                    {
+                        let s = app_handle.state::<AppState>();
+                        push_console_line(&s, msg.clone()).await;
+                    }
+                    app_handle.emit("mc-line", &msg).ok();
+                    last_backup = std::time::Instant::now();
+                }
+            });
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

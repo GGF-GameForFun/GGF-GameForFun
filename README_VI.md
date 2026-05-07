@@ -2,6 +2,8 @@
 
 🌐 [English](./README.md) | Tiếng Việt
 
+**Bản cập nhật nhỏ hiện tại: `v0.1.1v2`**
+
 Ứng dụng desktop nhẹ để host server Minecraft — Vanilla, Paper, Forge, Fabric và NeoForge — tích hợp sẵn [playit.gg](https://playit.gg) giúp bạn bè có thể vào chơi mà không cần cấu hình router hay mở port.
 
 > Được tạo bởi **Aingker** · [Cộng đồng Discord](https://discord.gg/bF62psq97S)
@@ -92,8 +94,30 @@ Double-click vào `.dmg`, kéo **GameForFun** vào thư mục Applications và m
 4. Đặt tên server, đường dẫn cài đặt và dung lượng RAM
 5. Bấm **Install** — app tự tải mọi thứ
 6. Sau khi xong, bấm **▶ Start** trên Dashboard
-7. Vào tab **Tunnel** → **▶ Start** → click vào claim URL → thiết lập tunnel playit.gg
-8. Chia sẻ địa chỉ `xxxxx.joinmc.link:NNNNN` cho bạn bè — dán thẳng vào ô Add Server trong Minecraft
+7. Mở tab **Tunnel** và bấm **▶ Start**
+8. Nếu hiện **claim URL**, bấm vào và đăng nhập trên playit.gg
+9. Trên playit.gg, tạo tunnel loại **Minecraft Java** và đặt local port là `25565` (hoặc đúng port server của bạn)
+10. Quay lại GameForFun và chờ card Tunnel hiển thị địa chỉ public
+11. Chia sẻ địa chỉ đó cho bạn bè (`domain:port` nếu có port)
+
+## 🌐 Hướng Dẫn Nhanh playit.gg (Quan Trọng)
+
+Nhiều người dùng bị thiếu 1 bước nên tunnel chạy nhưng bạn bè vẫn không vào được.
+
+1. Bật Minecraft server trước (Dashboard phải hiện **Online**).
+2. Mở tab **Tunnel** và bật playit agent.
+3. Nếu có claim URL thì hoàn tất claim.
+4. Trong dashboard playit, tunnel type phải là **Minecraft Java (TCP)**.
+5. Local address phải trỏ đúng máy/port server (`127.0.0.1:25565` hoặc LAN IP + server port).
+6. Chờ GameForFun hiển thị địa chỉ trong card Tunnel.
+7. Nếu chưa thấy địa chỉ ngay, giữ tab Tunnel mở thêm một lúc sau khi claim.
+
+Nếu bạn bè không kết nối được:
+
+1. Kiểm tra server còn chạy ổn định.
+2. Kiểm tra local port tunnel trùng `server-port` trong `server.properties`.
+3. Thử dùng trực tiếp `IP:PORT` từ playit dashboard.
+4. Tắt/bật lại Tunnel một lần.
 
 ---
 

@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "GameForFun",
-  "version": "0.1.1",
+  "version": "0.1.1-v2",
   "identifier": "dev.gameforfun.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -43,7 +43,8 @@
       },
       "nsis": {
         "displayLanguageSelector": false,
-        "installMode": "perMachine"
+        "installMode": "perMachine",
+        "installerHooks": "windows/hooks.nsh"
       }
     }
   }

@@ -40,6 +40,33 @@ struct ApiResponse {
     data: serde_json::Value,
 }
 
+fn tunnel_address_from_value(tunnel: &serde_json::Value) -> Option<String> {
+    let domain = tunnel.get("custom_domain")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty())
+        .or_else(|| tunnel.get("assigned_domain").and_then(|v| v.as_str()))
+        .or_else(|| tunnel.get("domain").and_then(|v| v.as_str()))
+        .or_else(|| tunnel.get("hostname").and_then(|v| v.as_str()))
+        .or_else(|| tunnel.get("host").and_then(|v| v.as_str()))?;
+
+    // Some responses already include host:port in the domain field.
+    if domain.contains(':') {
+        return Some(domain.to_string());
+    }
+
+    let port = tunnel.get("port")
+        .and_then(|v| v.get("from").or_else(|| v.get("public")).or_else(|| v.get("port")))
+        .and_then(|v| v.as_u64())
+        .or_else(|| tunnel.get("from").and_then(|v| v.as_u64()))
+        .or_else(|| tunnel.get("public_port").and_then(|v| v.as_u64()))
+        .or_else(|| tunnel.get("port").and_then(|v| v.as_u64()));
+
+    match port {
+        Some(p) => Some(format!("{}:{}", domain, p)),
+        None => Some(domain.to_string()),
+    }
+}
+
 /// Query the playit API for the current agent's tunnels and return the first
 /// Minecraft tunnel address as "host:port", or None if no Minecraft tunnel is set up yet.
 pub async fn query_tunnel_address() -> Option<String> {
@@ -61,15 +88,10 @@ pub async fn query_tunnel_address() -> Option<String> {
     let preferred = tunnels.iter().find(|t| {
         t.get("tunnel_type").and_then(|v| v.as_str()) == Some("minecraft-java")
     });
-    let tunnel = preferred.or_else(|| tunnels.first())?;
-
-    let domain = tunnel.get("custom_domain")
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.is_empty())
-        .or_else(|| tunnel.get("assigned_domain").and_then(|v| v.as_str()))?;
-
-    let port = tunnel.get("port")?.get("from")?.as_u64()?;
-    Some(format!("{}:{}", domain, port))
+    if let Some(addr) = preferred.and_then(tunnel_address_from_value) {
+        return Some(addr);
+    }
+    tunnels.first().and_then(tunnel_address_from_value)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
