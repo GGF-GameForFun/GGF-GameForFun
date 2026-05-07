@@ -12,6 +12,9 @@ export interface ServerConfig {
   server_name: string;
   setup_complete: boolean;
   auto_restart: boolean;
+  backup_interval_minutes: number;
+  backup_dir: string;
+  backup_include_logs: boolean;
 }
 
 export interface McVersion {

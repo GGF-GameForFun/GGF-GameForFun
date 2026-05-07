@@ -38,6 +38,9 @@ export default function SetupWizard({ onComplete }: Props) {
     server_name: "My Minecraft Server",
     server_path: "",
     auto_restart: true,
+    backup_interval_minutes: 0,
+    backup_dir: "",
+    backup_include_logs: false,
   });
 
   const [progress, setProgress] = useState<InstallProgress>({ message: "", progress: 0 });

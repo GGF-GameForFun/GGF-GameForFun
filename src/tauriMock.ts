@@ -12,6 +12,9 @@ const MOCK_CONFIG: ServerConfig = {
   server_name: "My Minecraft Server",
   setup_complete: true,
   auto_restart: true,
+  backup_interval_minutes: 0,
+  backup_dir: "",
+  backup_include_logs: false,
 };
 
 const handlers: Record<string, (...args: unknown[]) => unknown> = {
@@ -48,6 +51,7 @@ const handlers: Record<string, (...args: unknown[]) => unknown> = {
   stop_server: () => undefined,
   restart_server: () => undefined,
   send_command: () => undefined,
+  get_recent_players: () => [["DemoPlayer1", new Date(Date.now() - 600_000).toISOString()]],
   list_mods: () => ["EssentialsX-2.20.1.jar", "WorldEdit-7.3.0.jar"],
   add_mod: () => undefined,
   remove_mod: () => undefined,

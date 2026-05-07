@@ -9,7 +9,8 @@ import {
   InstallProgress,
   SERVER_TYPES,
 } from "../../types";
-import { useT } from "../../i18n";
+import { useT, Locale } from "../../i18n";
+import { PROPERTY_META, CATEGORY_META, PropMeta } from "./serverPropsMeta";
 
 interface Props {
   config: ServerConfig;
@@ -54,7 +55,7 @@ export default function ServerSettings({ config, onSave }: Props) {
     }
   }
 
-  const KEY_PROPS = ["max-players", "motd", "server-port", "difficulty", "gamemode", "pvp", "view-distance", "online-mode"];
+  // (KEY_PROPS list removed — replaced by PROPERTY_META in serverPropsMeta.ts)
 
   return (
     <div className="page-transition" style={{ padding: 24, maxWidth: 720, margin: "0 auto" }}>
@@ -132,12 +133,57 @@ export default function ServerSettings({ config, onSave }: Props) {
             style={{ width: "auto", padding: 0, margin: 0 }}
           />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 600 }}>♻ Auto-restart on crash</div>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>♻ {t("settings.autoRestart")}</div>
             <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
-              If the server exits unexpectedly, restart it automatically. Stops if it crashes 3+ times in 5 minutes.
+              {t("settings.autoRestartDesc")}
             </div>
           </div>
         </label>
+
+        {/* Auto-backup */}
+        <div
+          style={{
+            marginBottom: 14,
+            padding: "10px 12px",
+            background: "var(--surface2)",
+            borderRadius: "var(--radius-sm)",
+          }}
+        >
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
+            📦 {t("settings.autoBackup")}
+          </div>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 10 }}>
+            {t("settings.autoBackupDesc")}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <div>
+              <div className="label">{t("settings.autoBackupInterval")}</div>
+              <input
+                type="number"
+                value={form.backup_interval_minutes}
+                min={0}
+                max={1440}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, backup_interval_minutes: Number(e.target.value) }))
+                }
+                style={{ width: 120 }}
+              />
+            </div>
+            <label style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              fontSize: 12, color: "var(--text-muted)", cursor: "pointer",
+              marginTop: 18,
+            }}>
+              <input
+                type="checkbox"
+                checked={form.backup_include_logs}
+                onChange={(e) => setForm((f) => ({ ...f, backup_include_logs: e.target.checked }))}
+                style={{ width: "auto", padding: 0, margin: 0 }}
+              />
+              {t("settings.autoBackupIncludeLogs")}
+            </label>
+          </div>
+        </div>
 
         <button className="btn btn-primary btn-sm" onClick={saveConfig}>
           {saved ? `✓ ${t("common.saved")}` : t("common.save")}
@@ -147,66 +193,15 @@ export default function ServerSettings({ config, onSave }: Props) {
       {/* Version / Mod Loader change */}
       <VersionChangeCard config={config} onSave={onSave} />
 
-      {/* Server properties */}
-      <div className="card">
-        <div style={{ fontWeight: 600, marginBottom: 14 }}>{t("settings.serverProperties")}</div>
+      {/* Server properties — friendly UI grouped by category */}
+      <PropertiesEditor
+        loadingProps={loadingProps}
+        props={props}
+        setProps={setProps}
+        propsSaved={propsSaved}
+        saveProps={saveProps}
+      />
 
-        {loadingProps ? (
-          <div style={{ color: "var(--text-muted)" }}>{t("common.loading")}</div>
-        ) : (
-          <>
-            {KEY_PROPS.filter((k) => k in props).map((key) => (
-              <div key={key} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                <div
-                  style={{
-                    width: 160,
-                    fontFamily: "monospace",
-                    fontSize: 12,
-                    color: key === "online-mode" ? "var(--text-muted)" : "var(--text)",
-                    flexShrink: 0,
-                  }}
-                >
-                  {key}
-                </div>
-                <input
-                  value={props[key] ?? ""}
-                  onChange={(e) =>
-                    setProps((p) => ({ ...p, [key]: e.target.value }))
-                  }
-                  style={{ flex: 1 }}
-                  disabled={key === "online-mode"}
-                />
-              </div>
-            ))}
-
-            {/* Remaining props */}
-            {Object.keys(props)
-              .filter((k) => !KEY_PROPS.includes(k))
-              .sort()
-              .map((key) => (
-                <div key={key} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                  <div style={{ width: 160, fontFamily: "monospace", fontSize: 12, flexShrink: 0 }}>
-                    {key}
-                  </div>
-                  <input
-                    value={props[key] ?? ""}
-                    onChange={(e) =>
-                      setProps((p) => ({ ...p, [key]: e.target.value }))
-                    }
-                    style={{ flex: 1 }}
-                  />
-                </div>
-              ))}
-
-            <button className="btn btn-primary btn-sm" style={{ marginTop: 8 }} onClick={saveProps}>
-              {propsSaved ? `✓ ${t("common.saved")}` : t("common.save")}
-            </button>
-            <div style={{ color: "var(--text-muted)", fontSize: 11, marginTop: 6 }}>
-              {t("settings.restartHint")}
-            </div>
-          </>
-        )}
-      </div>
 
       <ToolsSection />
     </div>
@@ -341,7 +336,7 @@ function VersionChangeCard({
 
   return (
     <div className="card" style={{ marginBottom: 16 }}>
-      <div style={{ fontWeight: 600, marginBottom: 14 }}>🎮 Server Type & Version</div>
+      <div style={{ fontWeight: 600, marginBottom: 14 }}>🎮 {t("settings.versionSection")}</div>
 
       {!editing ? (
         <>
@@ -357,15 +352,15 @@ function VersionChangeCard({
             </div>
           </div>
           <button className="btn btn-sm" onClick={startEdit}>
-            🔄 Change version / mod loader…
+            🔄 {t("settings.changeVersion")}
           </button>
           <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8, lineHeight: 1.5 }}>
-            Changing the version or loader will re-download and reinstall the server jar. Your <code>world/</code> folder is not deleted.
+            {t("settings.versionHint")}
           </div>
         </>
       ) : (
         <>
-          <div className="label">Server Type</div>
+          <div className="label">{t("settings.serverType")}</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
             {SERVER_TYPES.map((s) => {
               const selected = serverType === s.id;
@@ -392,9 +387,9 @@ function VersionChangeCard({
             })}
           </div>
 
-          <div className="label">Minecraft Version</div>
+          <div className="label">{t("settings.minecraftVersion")}</div>
           {loadingVersions ? (
-            <div style={{ color: "var(--text-muted)", padding: "8px 0" }}>Fetching versions…</div>
+            <div style={{ color: "var(--text-muted)", padding: "8px 0" }}>{t("settings.fetchingVersions")}</div>
           ) : fetchError ? (
             <div style={{ marginBottom: 14 }}>
               <div style={{
@@ -423,16 +418,20 @@ function VersionChangeCard({
 
           {meta.needsLoader && (
             <>
-              <div className="label">{serverType === "paper" ? "Paper Build" : `${meta.name} Version`}</div>
+              <div className="label">
+                {serverType === "paper"
+                  ? t("settings.paperBuild")
+                  : t("settings.loaderVersion", { name: meta.name })}
+              </div>
               {loadingLoaders ? (
-                <div style={{ color: "var(--text-muted)", padding: "8px 0" }}>Fetching loaders…</div>
+                <div style={{ color: "var(--text-muted)", padding: "8px 0" }}>{t("settings.fetchingLoaders")}</div>
               ) : loaderVersions.length === 0 ? (
                 <div style={{
                   color: "var(--yellow)", background: "#2a2200",
                   border: "1px solid var(--yellow)", borderRadius: 6,
                   padding: "8px 12px", fontSize: 12, marginBottom: 14,
                 }}>
-                  No {meta.name} version found for Minecraft {mcVersion}.
+                  {t("settings.noLoaderFound", { name: meta.name, mc: mcVersion })}
                 </div>
               ) : (
                 <select
@@ -452,7 +451,7 @@ function VersionChangeCard({
           {installing && (
             <div style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 12, color: "var(--blue)", marginBottom: 6 }}>
-                {progress.message || "Reinstalling…"}
+                {progress.message || t("settings.reinstalling")}
               </div>
               <div style={{ background: "var(--surface2)", borderRadius: 4, height: 8, overflow: "hidden" }}>
                 <div style={{
@@ -486,7 +485,7 @@ function VersionChangeCard({
                 setInstallError("");
               }}
             >
-              {t("common.cancel") || "Cancel"}
+              {t("common.cancel")}
             </button>
             <button
               className="btn btn-primary btn-sm"
@@ -498,12 +497,304 @@ function VersionChangeCard({
               }
               onClick={reinstall}
             >
-              {installing ? "Reinstalling…" : "Reinstall server"}
+              {installing ? t("settings.reinstalling") : t("settings.reinstallButton")}
             </button>
           </div>
         </>
       )}
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Friendly server.properties editor — typed inputs grouped by category
+// ─────────────────────────────────────────────────────────────────────────────
+
+function PropertiesEditor({
+  loadingProps,
+  props,
+  setProps,
+  propsSaved,
+  saveProps,
+}: {
+  loadingProps: boolean;
+  props: Record<string, string>;
+  setProps: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  propsSaved: boolean;
+  saveProps: () => void;
+}) {
+  const { t, locale } = useT();
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showRaw, setShowRaw] = useState(false);
+
+  if (loadingProps) {
+    return (
+      <div className="card">
+        <div style={{ fontWeight: 600, marginBottom: 14 }}>{t("settings.serverProperties")}</div>
+        <div style={{ color: "var(--text-muted)" }}>{t("common.loading")}</div>
+      </div>
+    );
+  }
+
+  const knownKeys = new Set(PROPERTY_META.map((m) => m.key));
+  const unknownKeys = Object.keys(props).filter((k) => !knownKeys.has(k)).sort();
+
+  // Group known props by category, only including ones that exist in props
+  const byCategory: Record<string, PropMeta[]> = {};
+  for (const meta of PROPERTY_META) {
+    if (!(meta.key in props)) continue;
+    if (!byCategory[meta.category]) byCategory[meta.category] = [];
+    byCategory[meta.category].push(meta);
+  }
+
+  const categoryOrder: PropMeta["category"][] = ["gameplay", "world", "players", "network", "advanced"];
+
+  const setValue = (key: string, value: string) => {
+    setProps((p) => ({ ...p, [key]: value }));
+  };
+
+  return (
+    <div className="card">
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontWeight: 600 }}>🌐 {t("settings.serverProperties")}</div>
+        <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2, fontFamily: "monospace" }}>
+          {t("settings.serverPropertiesSubtitle")}
+        </div>
+      </div>
+
+      {categoryOrder.map((cat) => {
+        const items = byCategory[cat] ?? [];
+        if (items.length === 0) return null;
+        if (cat === "advanced" && !showAdvanced) {
+          return (
+            <button
+              key={cat}
+              className="btn btn-sm"
+              onClick={() => setShowAdvanced(true)}
+              style={{ marginBottom: 12 }}
+            >
+              ▸ {CATEGORY_META[cat].icon} {CATEGORY_META[cat].label[locale]} ({items.length})
+            </button>
+          );
+        }
+        return (
+          <div key={cat} style={{ marginBottom: 18 }}>
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                color: "var(--text-muted)",
+                marginBottom: 10,
+                paddingBottom: 6,
+                borderBottom: "1px solid var(--border)",
+              }}
+            >
+              {CATEGORY_META[cat].icon} {CATEGORY_META[cat].label[locale]}
+            </div>
+            {items.map((meta) => (
+              <PropRow
+                key={meta.key}
+                meta={meta}
+                value={props[meta.key] ?? ""}
+                onChange={(v) => setValue(meta.key, v)}
+                locale={locale}
+              />
+            ))}
+          </div>
+        );
+      })}
+
+      {unknownKeys.length > 0 && (
+        <>
+          <button
+            className="btn btn-sm"
+            onClick={() => setShowRaw(!showRaw)}
+            style={{ marginBottom: 12 }}
+          >
+            {showRaw ? "▾" : "▸"} {locale === "vi" ? "Tùy chọn khác (raw)" : "Other Properties (raw)"} ({unknownKeys.length})
+          </button>
+          {showRaw && (
+            <div style={{ marginBottom: 14 }}>
+              {unknownKeys.map((key) => (
+                <div key={key} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                  <div
+                    style={{
+                      width: 200,
+                      fontFamily: "monospace",
+                      fontSize: 11,
+                      color: "var(--text-muted)",
+                      flexShrink: 0,
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    {key}
+                  </div>
+                  <input
+                    value={props[key] ?? ""}
+                    onChange={(e) => setValue(key, e.target.value)}
+                    style={{ flex: 1, fontSize: 12 }}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      <button className="btn btn-primary btn-sm" style={{ marginTop: 4 }} onClick={saveProps}>
+        {propsSaved ? `✓ ${t("common.saved")}` : t("common.save")}
+      </button>
+      <div style={{ color: "var(--text-muted)", fontSize: 11, marginTop: 6 }}>
+        {t("settings.restartHint")}
+      </div>
+    </div>
+  );
+}
+
+function PropRow({
+  meta,
+  value,
+  onChange,
+  locale,
+}: {
+  meta: PropMeta;
+  value: string;
+  onChange: (v: string) => void;
+  locale: Locale;
+}) {
+  const isRecommended = meta.recommended != null && value === meta.recommended;
+  const recommendedLabel = locale === "vi" ? "Khuyên dùng" : "Recommended";
+
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "minmax(180px, 1fr) minmax(180px, 1.2fr)",
+        gap: 14,
+        alignItems: "start",
+        padding: "10px 0",
+        borderBottom: "1px dashed var(--border)",
+      }}
+    >
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2, opacity: meta.locked ? 0.6 : 1 }}>
+          {meta.label[locale]}
+        </div>
+        {meta.desc && (
+          <div style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.5, marginBottom: 4 }}>
+            {meta.desc[locale]}
+          </div>
+        )}
+        <div style={{ fontFamily: "monospace", fontSize: 10, color: "var(--text-muted)", opacity: 0.6 }}>
+          {meta.key}
+        </div>
+        {meta.locked && meta.lockReason && (
+          <div style={{
+            marginTop: 4, fontSize: 10, color: "var(--yellow)",
+            background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.3)",
+            padding: "3px 8px", borderRadius: 4, display: "inline-block",
+          }}>
+            🔒 {meta.lockReason[locale]}
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {renderInput(meta, value, onChange, locale)}
+        {meta.recommended != null && !isRecommended && !meta.locked && (
+          <div style={{ fontSize: 10, color: "var(--text-muted)" }}>
+            {recommendedLabel}: <code style={{ color: "var(--accent)" }}>{meta.recommended}</code>
+            <button
+              onClick={() => onChange(meta.recommended!)}
+              style={{
+                marginLeft: 8, fontSize: 10, padding: "2px 8px",
+                background: "transparent", color: "var(--accent)",
+                border: "1px solid rgba(74,222,128,0.4)", borderRadius: 999,
+                cursor: "pointer",
+              }}
+            >
+              {locale === "vi" ? "Dùng" : "Apply"}
+            </button>
+          </div>
+        )}
+        {isRecommended && !meta.locked && (
+          <div style={{ fontSize: 10, color: "var(--accent)" }}>
+            ✓ {recommendedLabel}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function renderInput(
+  meta: PropMeta,
+  value: string,
+  onChange: (v: string) => void,
+  locale: Locale,
+) {
+  const disabled = meta.locked === true;
+
+  if (meta.kind === "toggle") {
+    const isOn = value === "true";
+    return (
+      <label style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: disabled ? "not-allowed" : "pointer" }}>
+        <input
+          type="checkbox"
+          checked={isOn}
+          disabled={disabled}
+          onChange={(e) => onChange(e.target.checked ? "true" : "false")}
+          style={{ width: "auto", padding: 0, margin: 0 }}
+        />
+        <span style={{ fontSize: 12, color: isOn ? "var(--accent)" : "var(--text-muted)" }}>
+          {isOn ? (locale === "vi" ? "Bật" : "On") : (locale === "vi" ? "Tắt" : "Off")}
+        </span>
+      </label>
+    );
+  }
+
+  if (meta.kind === "select" && meta.options) {
+    return (
+      <select
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+        style={{ width: "100%" }}
+      >
+        {meta.options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label[locale]}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
+  if (meta.kind === "number") {
+    return (
+      <input
+        type="number"
+        value={value}
+        disabled={disabled}
+        min={meta.min}
+        max={meta.max}
+        onChange={(e) => onChange(e.target.value)}
+        style={{ width: "100%" }}
+      />
+    );
+  }
+
+  // text
+  return (
+    <input
+      type="text"
+      value={value}
+      disabled={disabled}
+      onChange={(e) => onChange(e.target.value)}
+      style={{ width: "100%" }}
+    />
   );
 }
 
@@ -515,9 +806,10 @@ interface BackupProgress { files: number; bytes: number; current: string }
 
 function ToolsSection() {
   const { t } = useT();
-  const [busy, setBusy] = useState<"backup" | "debug" | null>(null);
+  const [busy, setBusy] = useState<"backup" | "restore" | "debug" | null>(null);
   const [includeLogs, setIncludeLogs] = useState(false);
   const [progress, setProgress] = useState<BackupProgress | null>(null);
+  const [restoreConfirm, setRestoreConfirm] = useState<string | null>(null);
   const [resultMsg, setResultMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [serverStatus, setServerStatus] = useState<ServerStatus>("stopped");
 
@@ -525,8 +817,39 @@ function ToolsSection() {
     invoke<ServerStatus>("get_server_status").then(setServerStatus).catch(() => {});
     const u1 = listen<ServerStatus>("server-status", (e) => setServerStatus(e.payload));
     const u2 = listen<BackupProgress>("backup-progress", (e) => setProgress(e.payload));
-    return () => { u1.then((f) => f()); u2.then((f) => f()); };
+    const u3 = listen<BackupProgress>("restore-progress", (e) => setProgress(e.payload));
+    return () => { u1.then((f) => f()); u2.then((f) => f()); u3.then((f) => f()); };
   }, []);
+
+  async function runRestore() {
+    setResultMsg(null);
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const src = await open({
+        multiple: false,
+        filters: [{ name: "ZIP archive", extensions: ["zip"] }],
+      });
+      if (typeof src !== "string") return;
+      setRestoreConfirm(src);
+    } catch (e) {
+      setResultMsg({ type: "err", text: String(e) });
+    }
+  }
+
+  async function confirmRestore(src: string) {
+    setRestoreConfirm(null);
+    setBusy("restore");
+    setProgress(null);
+    try {
+      const files = await invoke<number>("restore_backup", { src });
+      setResultMsg({ type: "ok", text: t("tools.restore.success", { files: String(files) }) });
+    } catch (e) {
+      setResultMsg({ type: "err", text: String(e) });
+    } finally {
+      setBusy(null);
+      setProgress(null);
+    }
+  }
 
   async function runBackup() {
     setResultMsg(null);
@@ -650,6 +973,85 @@ function ToolsSection() {
         )}
       </div>
 
+      {/* Restore */}
+      <div style={{
+        padding: "12px 14px",
+        background: "var(--surface2)",
+        borderRadius: "var(--radius-sm)",
+        marginBottom: 12,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>♻ {t("tools.restore.title")}</div>
+            <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4, lineHeight: 1.5 }}>
+              {t("tools.restore.desc")}
+            </div>
+          </div>
+          <button
+            className="btn btn-sm"
+            disabled={busy === "restore" || serverRunning}
+            onClick={runRestore}
+            title={serverRunning ? t("tools.restore.warnRunning") : ""}
+          >
+            {busy === "restore" ? "…" : t("tools.restore.button")}
+          </button>
+        </div>
+        {serverRunning && (
+          <div style={{
+            marginTop: 10, fontSize: 12, color: "var(--yellow)",
+            background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.35)",
+            padding: "6px 10px", borderRadius: "var(--radius-sm)",
+          }}>
+            {t("tools.restore.warnRunning")}
+          </div>
+        )}
+        {busy === "restore" && progress && (
+          <div className="fade-in" style={{
+            marginTop: 10, fontSize: 12, color: "var(--blue)",
+            display: "flex", alignItems: "center", gap: 8,
+          }}>
+            <span style={{
+              display: "inline-block", width: 10, height: 10,
+              border: "2px solid var(--blue)", borderRightColor: "transparent",
+              borderRadius: "50%", animation: "spin 0.8s linear infinite",
+            }} />
+            {t("tools.restore.running", { files: String(progress.files) })}
+          </div>
+        )}
+      </div>
+
+      {/* Restore confirmation */}
+      {restoreConfirm && (
+        <div className="modal-backdrop" onClick={() => setRestoreConfirm(null)}>
+          <div className="modal" style={{ padding: 24, maxWidth: 460, width: "100%" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 14, marginBottom: 14, lineHeight: 1.6 }}>
+              {t("tools.restore.confirmTitle")}
+            </div>
+            <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 14, fontFamily: "monospace", wordBreak: "break-all" }}>
+              {restoreConfirm}
+            </div>
+            <div style={{
+              fontSize: 12, color: "var(--yellow)",
+              background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.35)",
+              padding: "8px 12px", borderRadius: "var(--radius-sm)", marginBottom: 16, lineHeight: 1.5,
+            }}>
+              ⚠ {t("tools.restore.confirmWarning")}
+            </div>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button className="btn btn-sm" onClick={() => setRestoreConfirm(null)}>
+                {t("common.cancel")}
+              </button>
+              <button className="btn btn-primary btn-sm" onClick={() => confirmRestore(restoreConfirm)}>
+                {t("tools.restore.button")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pre-generate chunks */}
+      <PregenCard serverRunning={serverRunning} />
+
       {/* Debug Export */}
       <div style={{
         padding: "12px 14px",
@@ -686,6 +1088,150 @@ function ToolsSection() {
           wordBreak: "break-all",
         }}>
           {resultMsg.text}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pre-generate Chunks card
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface PregenState {
+  running: boolean;
+  total: number;
+  completed: number;
+  cancel_requested: boolean;
+}
+
+function PregenCard({ serverRunning }: { serverRunning: boolean }) {
+  const { t } = useT();
+  const [count, setCount] = useState(1000);
+  const [state, setState] = useState<PregenState>({
+    running: false, total: 0, completed: 0, cancel_requested: false,
+  });
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    invoke<PregenState>("get_pregen_state").then(setState).catch(() => {});
+    const u = listen<PregenState>("pregen-update", (e) => setState(e.payload));
+    return () => { u.then((f) => f()); };
+  }, []);
+
+  // Estimate: ~120ms per chunk + 1.5s minimum per batch (16x16=256 chunks per batch)
+  const estimatedSecs = Math.ceil(count * 0.12);
+  const estMins = Math.max(1, Math.ceil(estimatedSecs / 60));
+  const side = Math.ceil(Math.sqrt(count));
+  const sideOdd = side % 2 === 0 ? side + 1 : side;
+  const blocksAcross = sideOdd * 16;
+
+  async function start() {
+    setError("");
+    try {
+      await invoke("pregenerate_chunks", { totalChunks: count });
+    } catch (e) {
+      setError(String(e));
+    }
+  }
+
+  async function cancel() {
+    try { await invoke("cancel_pregenerate"); } catch {}
+  }
+
+  const pct = state.total > 0 ? Math.round((state.completed / state.total) * 100) : 0;
+
+  return (
+    <div style={{
+      padding: "12px 14px",
+      background: "var(--surface2)",
+      borderRadius: "var(--radius-sm)",
+      marginBottom: 12,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 220 }}>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>🗺 {t("tools.pregen.title")}</div>
+          <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4, lineHeight: 1.5 }}>
+            {t("tools.pregen.desc")}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 12, display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
+        <div>
+          <div className="label">{t("tools.pregen.field")}</div>
+          <input
+            type="number"
+            value={count}
+            min={9}
+            max={50000}
+            step={100}
+            disabled={state.running}
+            onChange={(e) => setCount(Math.max(9, Number(e.target.value)))}
+            style={{ width: 140 }}
+          />
+        </div>
+        {!state.running ? (
+          <button
+            className="btn btn-primary btn-sm"
+            disabled={!serverRunning}
+            onClick={start}
+            title={!serverRunning ? t("tools.pregen.serverNeeded") : ""}
+          >
+            ▶ {t("tools.pregen.button")}
+          </button>
+        ) : (
+          <button className="btn btn-sm btn-danger" onClick={cancel} disabled={state.cancel_requested}>
+            ■ {t("tools.pregen.cancel")}
+          </button>
+        )}
+      </div>
+
+      <div style={{ marginTop: 6, fontSize: 11, color: "var(--text-muted)" }}>
+        {t("tools.pregen.fieldHint")}
+      </div>
+
+      {!state.running && !serverRunning && (
+        <div style={{
+          marginTop: 10, fontSize: 12, color: "var(--yellow)",
+          background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.35)",
+          padding: "6px 10px", borderRadius: "var(--radius-sm)",
+        }}>
+          {t("tools.pregen.serverNeeded")}
+        </div>
+      )}
+
+      {!state.running && (
+        <div style={{ marginTop: 8, fontSize: 11, color: "var(--text-muted)" }}>
+          {t("tools.pregen.estTime", { mins: String(estMins), area: String(blocksAcross) })}
+        </div>
+      )}
+
+      {state.running && (
+        <div className="fade-in" style={{ marginTop: 12 }}>
+          <div style={{ fontSize: 12, color: "var(--blue)", marginBottom: 6 }}>
+            {t("tools.pregen.progress", {
+              done: String(state.completed),
+              total: String(state.total),
+              pct: String(pct),
+            })}
+          </div>
+          <div style={{ background: "var(--surface3)", borderRadius: 999, height: 8, overflow: "hidden" }}>
+            <div style={{
+              background: "var(--accent)", height: "100%",
+              width: `${pct}%`, transition: "width 0.4s ease",
+            }} />
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div style={{
+          marginTop: 10, fontSize: 12, color: "var(--red)",
+          background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.4)",
+          padding: "6px 10px", borderRadius: "var(--radius-sm)",
+        }}>
+          ⚠ {error}
         </div>
       )}
     </div>
