@@ -42,6 +42,7 @@ export default function SetupWizard({ onComplete }: Props) {
   const [progress, setProgress] = useState<InstallProgress>({ message: "", progress: 0 });
   const [installError, setInstallError] = useState("");
   const [playitError, setPlayitError] = useState("");
+  const [fetchError, setFetchError] = useState("");
 
   useEffect(() => {
     invoke<string>("default_server_path").then((p) => setForm((f) => ({ ...f, server_path: p })));
@@ -56,7 +57,9 @@ export default function SetupWizard({ onComplete }: Props) {
   async function pickType(t: ServerType) {
     set("server_type", t);
     set("loader_version", null);
+    setFetchError("");
     setLoadingVersions(true);
+    setStep("version");
     try {
       if (t === "paper") {
         const v = await invoke<string[]>("fetch_paper_versions");
@@ -67,15 +70,17 @@ export default function SetupWizard({ onComplete }: Props) {
         setVersions(v);
         if (v.length > 0) set("minecraft_version", v[0].id);
       }
+    } catch (e) {
+      setFetchError(`Failed to fetch versions: ${String(e)}. Check your internet connection and try again.`);
     } finally {
       setLoadingVersions(false);
     }
-    setStep("version");
   }
 
   async function loadLoaderVersions(serverType: ServerType, mcVersion: string) {
     setLoadingLoaders(true);
     setLoaderVersions([]);
+    setFetchError("");
     try {
       let cmd: string;
       switch (serverType) {
@@ -88,6 +93,8 @@ export default function SetupWizard({ onComplete }: Props) {
       const v = await invoke<LoaderVersion[]>(cmd, { mcVersion });
       setLoaderVersions(v);
       if (v.length > 0) set("loader_version", v[0].version);
+    } catch (e) {
+      setFetchError(`Failed to fetch loader versions: ${String(e)}. Check your internet connection and try again.`);
     } finally {
       setLoadingLoaders(false);
     }
@@ -203,6 +210,17 @@ export default function SetupWizard({ onComplete }: Props) {
             <div className="label">{t("setup.minecraftVersion")}</div>
             {loadingVersions ? (
               <div style={{ color: "var(--text-muted)", padding: "8px 0" }}>{t("setup.fetchingVersions")}</div>
+            ) : fetchError ? (
+              <div style={{ marginBottom: 16 }}>
+                <Alert color="red">{fetchError}</Alert>
+                <button
+                  className="btn btn-sm"
+                  style={{ marginTop: 10 }}
+                  onClick={() => pickType(form.server_type!)}
+                >
+                  🔄 Retry
+                </button>
+              </div>
             ) : (
               <select
                 value={form.minecraft_version}
@@ -258,6 +276,17 @@ export default function SetupWizard({ onComplete }: Props) {
             </div>
             {loadingLoaders ? (
               <div style={{ color: "var(--text-muted)", padding: "8px 0" }}>{t("setup.fetching")}</div>
+            ) : fetchError ? (
+              <div style={{ marginBottom: 16 }}>
+                <Alert color="red">{fetchError}</Alert>
+                <button
+                  className="btn btn-sm"
+                  style={{ marginTop: 10 }}
+                  onClick={() => loadLoaderVersions(form.server_type!, form.minecraft_version!)}
+                >
+                  🔄 Retry
+                </button>
+              </div>
             ) : loaderVersions.length === 0 ? (
               <Alert color="yellow">
                 {t("setup.notFoundFor", { name: meta.name, mc: form.minecraft_version! })}
