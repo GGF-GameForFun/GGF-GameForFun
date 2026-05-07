@@ -136,7 +136,34 @@ npm run tauri:build
 
 ## 📝 Dev Logs
 
-### v0.1.1-v2 — Small Update *(latest)*
+### v0.1.2-dev — Branding, Performance & Admin Tools *(latest)*
+
+**`feat`** — refresh branding and app visuals *(`2515ccf`)*
+- `src-tauri/icons/**` — replaced native app icon set with the new GameForFun logo
+- `src/assets/gameforfun-logo-ui.png` — added lightweight UI logo asset for the sidebar
+- `src/components/Layout.tsx` — sidebar now uses the logo and the “Monkey Zoo Crew” subtitle
+- `src/styles/globals.css` — refreshed dark theme with blue-purple accents matching the logo
+- `src/components/InfoPopup.tsx`, `src/components/Mods/ModManager.tsx`, `src/components/Players/Players.tsx` — updated accent colors away from the older green-only look
+
+**`feat`** — reduce server CPU spikes with performance controls
+- `src-tauri/src/config.rs` — added `optimized_jvm_flags` and `performance_preset` config fields
+- `src-tauri/src/lib.rs` — server launch now applies Minecraft-focused G1GC JVM flags; Forge/NeoForge get managed `user_jvm_args.txt`
+- `src/components/Settings/ServerSettings.tsx` — added Performance card with Balanced / Low CPU / Heavy Modpack / Max Performance presets
+- `src-tauri/src/lib.rs` — new installs write CPU-friendlier world defaults (`view-distance`, `simulation-distance`)
+
+**`perf`** — reduce app-side rendering work
+- `src/components/Console/Console.tsx` — console now renders the latest visible window while keeping the backend buffer intact
+- `src/components/Layout.tsx` — removed forced page remount on tab switch to avoid unnecessary state churn
+
+**`feat`** — improve player moderation
+- `src/components/Players/Players.tsx` — added Banned Players section with ban metadata and Unban action
+- `src-tauri/src/lib.rs` — added `get_banned_players` and `unban_player`; unban edits `banned-players.json` directly and sends `pardon` if the server is running
+- `src/types.ts`, `src/tauriMock.ts`, `src/i18n.ts` — added banned-player types, mocks, and EN/VI translations
+
+**`fix`** — complete missing translations
+- `src/i18n.ts`, `src/App.tsx`, `src/components/Console/Console.tsx`, `src/components/Mods/ModManager.tsx`, `src/components/Setup/SetupWizard.tsx`, `src/components/Settings/ServerSettings.tsx`, `src/components/CreditPopup.tsx` — moved remaining UI strings behind the localization system
+
+### v0.1.1-v2 — Small Update
 
 **`fix`** — improve playit.gg address visibility after claim/setup
 - `src-tauri/src/lib.rs` — keep polling playit API while agent is running instead of stopping after ~2 minutes

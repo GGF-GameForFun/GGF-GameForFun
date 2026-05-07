@@ -136,7 +136,34 @@ npm run tauri:build
 
 ## 📝 Nhật Ký Phát Triển
 
-### v0.1.1-v2 — Bản cập nhật nhỏ *(mới nhất)*
+### v0.1.2-dev — Thương hiệu, Hiệu năng & Công cụ Admin *(mới nhất)*
+
+**`feat`** — làm mới thương hiệu và giao diện *(`2515ccf`)*
+- `src-tauri/icons/**` — thay toàn bộ bộ icon native bằng logo GameForFun mới
+- `src/assets/gameforfun-logo-ui.png` — thêm logo nhẹ dùng trong sidebar
+- `src/components/Layout.tsx` — sidebar dùng logo mới và subtitle “Monkey Zoo Crew” / “Một bầy khỉ trong sở thú”
+- `src/styles/globals.css` — đổi theme tối sang tông xanh-tím khớp với logo
+- `src/components/InfoPopup.tsx`, `src/components/Mods/ModManager.tsx`, `src/components/Players/Players.tsx` — cập nhật màu nhấn, không còn bị một màu xanh lá như trước
+
+**`feat`** — giảm CPU spike của server bằng tuỳ chọn hiệu năng
+- `src-tauri/src/config.rs` — thêm `optimized_jvm_flags` và `performance_preset`
+- `src-tauri/src/lib.rs` — khi chạy server sẽ áp dụng JVM flags G1GC tối ưu cho Minecraft; Forge/NeoForge được quản lý qua `user_jvm_args.txt`
+- `src/components/Settings/ServerSettings.tsx` — thêm card Hiệu năng với các preset Cân bằng / Tiết kiệm CPU / Modpack nặng / Hiệu năng tối đa
+- `src-tauri/src/lib.rs` — server mới sẽ có mặc định nhẹ CPU hơn (`view-distance`, `simulation-distance`)
+
+**`perf`** — giảm lượng render trong app
+- `src/components/Console/Console.tsx` — console chỉ render vùng log mới nhất nhưng vẫn giữ buffer backend đầy đủ
+- `src/components/Layout.tsx` — bỏ remount trang khi đổi tab để giảm churn state không cần thiết
+
+**`feat`** — cải thiện quản lý người chơi
+- `src/components/Players/Players.tsx` — thêm mục Người Chơi Bị Ban, hiển thị thông tin ban và nút Gỡ ban
+- `src-tauri/src/lib.rs` — thêm `get_banned_players` và `unban_player`; gỡ ban sửa trực tiếp `banned-players.json` và gửi `pardon` nếu server đang chạy
+- `src/types.ts`, `src/tauriMock.ts`, `src/i18n.ts` — thêm type, mock và bản dịch EN/VI cho danh sách ban
+
+**`fix`** — hoàn thiện các câu chưa được dịch
+- `src/i18n.ts`, `src/App.tsx`, `src/components/Console/Console.tsx`, `src/components/Mods/ModManager.tsx`, `src/components/Setup/SetupWizard.tsx`, `src/components/Settings/ServerSettings.tsx`, `src/components/CreditPopup.tsx` — chuyển các text còn hardcode sang hệ thống localization
+
+### v0.1.1-v2 — Bản cập nhật nhỏ
 
 **`fix`** — cải thiện hiển thị địa chỉ playit.gg sau khi claim/setup
 - `src-tauri/src/lib.rs` — tiếp tục poll API playit khi agent còn chạy, không dừng sau ~2 phút
