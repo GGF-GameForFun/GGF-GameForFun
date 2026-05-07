@@ -182,7 +182,7 @@ GameForFun đang ở giai đoạn beta. Trọng tâm hiện tại:
 ## Nhật Ký Phát Triển
 
 <details>
-<summary><strong>v0.1.2-dev — Thương hiệu, Hiệu năng & Công cụ Admin</strong></summary>
+<summary><strong>v0.1.2 — Thương hiệu, Hiệu năng & Công cụ Admin</strong></summary>
 
 ### Thương hiệu và UI
 

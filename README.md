@@ -182,7 +182,7 @@ Planned future ideas:
 ## Dev Logs
 
 <details>
-<summary><strong>v0.1.2-dev — Branding, Performance & Admin Tools</strong></summary>
+<summary><strong>v0.1.2 — Branding, Performance & Admin Tools</strong></summary>
 
 ### Branding and UI
 
