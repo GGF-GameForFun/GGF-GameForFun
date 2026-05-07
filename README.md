@@ -113,6 +113,35 @@ npm run tauri:build
 
 ---
 
+## 📝 Dev Logs
+
+### v0.1.1 — Stability & Polish *(latest)*
+
+**`feat`** — persistent player list, console buffer, and auto-restart on crash *(`01fc1fe`)*
+- `src-tauri/src/lib.rs` — backend now tracks online players & buffers last 2000 console lines; emits `auto-restart-requested` event on unexpected exit
+- `src-tauri/src/server.rs` — added `stop_requested` flag to reliably distinguish user-stop from crash
+- `src-tauri/src/config.rs` — added `auto_restart` config field (default true)
+- `src/App.tsx` — listens for `auto-restart-requested` at app level and re-invokes `start_server`
+- `src/components/Players/Players.tsx` — hydrates from backend on mount; subscribes to `players-update` event instead of parsing log lines
+- `src/components/Console/Console.tsx` — hydrates from backend buffer on mount; **Clear** also clears backend buffer
+- `src/components/Settings/ServerSettings.tsx` — added auto-restart toggle in App config card
+- `src/types.ts`, `src/tauriMock.ts`, `src/components/Setup/SetupWizard.tsx` — added `auto_restart` to `ServerConfig`
+
+**`feat`** — change server type, MC version, and mod loader from settings *(`f094419`)*
+- `src/components/Settings/ServerSettings.tsx` — added `VersionChangeCard` component letting users switch between Vanilla / Paper / Forge / Fabric / NeoForge and pick a different MC version without going through Setup again
+
+**`fix`** — show error and always navigate when version fetch fails *(`6e36dfd`)*
+- `src/components/Setup/SetupWizard.tsx` — added `fetchError` state + Retry button so failed Mojang/PaperMC API calls no longer leave the buttons silently dead
+
+### v0.1.0 — Initial Release
+
+**`feat`** — first public release *(`2ba097e`)*
+- Full project scaffold: React + Tauri + Rust backend
+- Server lifecycle, console, players, mods, settings, tunnel, backup, debug export
+- English & Vietnamese localization
+
+---
+
 ## 💬 Community & Support
 
 Join the Discord for help, updates, and to hang out:

@@ -113,6 +113,35 @@ npm run tauri:build
 
 ---
 
+## 📝 Nhật Ký Phát Triển
+
+### v0.1.1 — Ổn định & Hoàn thiện *(mới nhất)*
+
+**`feat`** — danh sách người chơi bền vững, bộ đệm console, và tự động khởi động lại khi crash *(`01fc1fe`)*
+- `src-tauri/src/lib.rs` — backend giờ tracking người chơi online & đệm 2000 dòng console gần nhất; emit event `auto-restart-requested` khi server thoát bất ngờ
+- `src-tauri/src/server.rs` — thêm flag `stop_requested` để phân biệt rõ user dừng hay server crash
+- `src-tauri/src/config.rs` — thêm field `auto_restart` (mặc định bật)
+- `src/App.tsx` — lắng nghe `auto-restart-requested` ở cấp app và tự gọi lại `start_server`
+- `src/components/Players/Players.tsx` — load lại từ backend khi mount; subscribe event `players-update` thay vì parse log
+- `src/components/Console/Console.tsx` — load lại từ buffer backend khi mount; nút **Clear** cũng xóa buffer backend
+- `src/components/Settings/ServerSettings.tsx` — thêm toggle bật/tắt auto-restart trong phần App config
+- `src/types.ts`, `src/tauriMock.ts`, `src/components/Setup/SetupWizard.tsx` — thêm `auto_restart` vào `ServerConfig`
+
+**`feat`** — đổi loại server, phiên bản MC, mod loader từ Settings *(`f094419`)*
+- `src/components/Settings/ServerSettings.tsx` — thêm component `VersionChangeCard` cho phép người dùng chuyển giữa Vanilla / Paper / Forge / Fabric / NeoForge hoặc chọn phiên bản MC khác mà không cần làm lại Setup
+
+**`fix`** — hiển thị lỗi và luôn điều hướng khi fetch version thất bại *(`6e36dfd`)*
+- `src/components/Setup/SetupWizard.tsx` — thêm state `fetchError` + nút Retry để khi gọi API Mojang/PaperMC fail thì các nút không bị "chết" im lặng
+
+### v0.1.0 — Bản Phát Hành Đầu Tiên
+
+**`feat`** — bản public đầu tiên *(`2ba097e`)*
+- Khung dự án đầy đủ: React + Tauri + Rust backend
+- Vòng đời server, console, người chơi, mods, settings, tunnel, backup, export debug
+- Hỗ trợ song ngữ Tiếng Anh & Tiếng Việt
+
+---
+
 ## 💬 Cộng Đồng & Hỗ Trợ
 
 Tham gia Discord để được hỗ trợ, cập nhật tin tức mới nhất và giao lưu:
