@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import { invoke, listen, saveFileDialog } from "../../tauri";
-import { ServerConfig, ServerStatus } from "../../types";
+import {
+  ServerConfig,
+  ServerStatus,
+  ServerType,
+  McVersion,
+  LoaderVersion,
+  InstallProgress,
+  SERVER_TYPES,
+} from "../../types";
 import { useT } from "../../i18n";
 
 interface Props {
@@ -110,6 +118,9 @@ export default function ServerSettings({ config, onSave }: Props) {
         </button>
       </div>
 
+      {/* Version / Mod Loader change */}
+      <VersionChangeCard config={config} onSave={onSave} />
+
       {/* Server properties */}
       <div className="card">
         <div style={{ fontWeight: 600, marginBottom: 14 }}>{t("settings.serverProperties")}</div>
@@ -172,6 +183,300 @@ export default function ServerSettings({ config, onSave }: Props) {
       </div>
 
       <ToolsSection />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Version + Mod Loader change card
+// ─────────────────────────────────────────────────────────────────────────────
+
+function VersionChangeCard({
+  config,
+  onSave,
+}: {
+  config: ServerConfig;
+  onSave: (cfg: ServerConfig) => void;
+}) {
+  const { t } = useT();
+  const [editing, setEditing] = useState(false);
+  const [serverType, setServerType] = useState<ServerType>(config.server_type);
+  const [mcVersion, setMcVersion] = useState(config.minecraft_version);
+  const [loaderVersion, setLoaderVersion] = useState<string | null>(config.loader_version);
+
+  const [versions, setVersions] = useState<McVersion[]>([]);
+  const [paperVersions, setPaperVersions] = useState<string[]>([]);
+  const [loaderVersions, setLoaderVersions] = useState<LoaderVersion[]>([]);
+  const [loadingVersions, setLoadingVersions] = useState(false);
+  const [loadingLoaders, setLoadingLoaders] = useState(false);
+  const [fetchError, setFetchError] = useState("");
+
+  const [installing, setInstalling] = useState(false);
+  const [progress, setProgress] = useState<InstallProgress>({ message: "", progress: 0 });
+  const [installError, setInstallError] = useState("");
+
+  const meta = SERVER_TYPES.find((s) => s.id === serverType)!;
+
+  async function loadVersionsFor(type: ServerType) {
+    setFetchError("");
+    setLoadingVersions(true);
+    try {
+      if (type === "paper") {
+        const v = await invoke<string[]>("fetch_paper_versions");
+        setPaperVersions(v);
+        if (v.length > 0 && !v.includes(mcVersion)) setMcVersion(v[0]);
+      } else {
+        const v = await invoke<McVersion[]>("fetch_mc_versions");
+        setVersions(v);
+        if (v.length > 0 && !v.find((x) => x.id === mcVersion)) setMcVersion(v[0].id);
+      }
+    } catch (e) {
+      setFetchError(`Failed to fetch versions: ${String(e)}`);
+    } finally {
+      setLoadingVersions(false);
+    }
+  }
+
+  async function loadLoaders(type: ServerType, mc: string) {
+    if (!SERVER_TYPES.find((s) => s.id === type)?.needsLoader) {
+      setLoaderVersions([]);
+      setLoaderVersion(null);
+      return;
+    }
+    setFetchError("");
+    setLoadingLoaders(true);
+    setLoaderVersions([]);
+    try {
+      const cmd =
+        type === "paper" ? "fetch_paper_builds" :
+        type === "forge" ? "fetch_forge_versions" :
+        type === "fabric" ? "fetch_fabric_versions" :
+        "fetch_neoforge_versions";
+      const v = await invoke<LoaderVersion[]>(cmd, { mcVersion: mc });
+      setLoaderVersions(v);
+      if (v.length > 0) setLoaderVersion(v[0].version);
+    } catch (e) {
+      setFetchError(`Failed to fetch loader versions: ${String(e)}`);
+    } finally {
+      setLoadingLoaders(false);
+    }
+  }
+
+  async function startEdit() {
+    setEditing(true);
+    setInstallError("");
+    await loadVersionsFor(serverType);
+    if (meta.needsLoader) await loadLoaders(serverType, mcVersion);
+  }
+
+  async function pickType(newType: ServerType) {
+    setServerType(newType);
+    setLoaderVersion(null);
+    await loadVersionsFor(newType);
+    const newMeta = SERVER_TYPES.find((s) => s.id === newType)!;
+    if (newMeta.needsLoader) {
+      const targetMc = newType === "paper" ? (paperVersions[0] ?? mcVersion) : mcVersion;
+      await loadLoaders(newType, targetMc);
+    } else {
+      setLoaderVersions([]);
+    }
+  }
+
+  async function pickMcVersion(v: string) {
+    setMcVersion(v);
+    if (meta.needsLoader) await loadLoaders(serverType, v);
+  }
+
+  async function reinstall() {
+    setInstalling(true);
+    setInstallError("");
+    const unlisten = await listen<InstallProgress>("install-progress", (e) =>
+      setProgress(e.payload)
+    );
+    try {
+      const newCfg: ServerConfig = {
+        ...config,
+        server_type: serverType,
+        minecraft_version: mcVersion,
+        loader_version: loaderVersion,
+        setup_complete: false,
+      };
+      const cfg = await invoke<ServerConfig>("install_server", { cfg: newCfg });
+      unlisten();
+      onSave(cfg);
+      setInstalling(false);
+      setEditing(false);
+    } catch (e) {
+      unlisten();
+      setInstallError(String(e));
+      setInstalling(false);
+    }
+  }
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <div style={{ fontWeight: 600, marginBottom: 14 }}>🎮 Server Type & Version</div>
+
+      {!editing ? (
+        <>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+            <div style={{ fontSize: 22 }}>{meta.icon}</div>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: 14 }}>
+                {meta.name}{loaderVersion ? ` ${loaderVersion}` : ""}
+              </div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                Minecraft {mcVersion}
+              </div>
+            </div>
+          </div>
+          <button className="btn btn-sm" onClick={startEdit}>
+            🔄 Change version / mod loader…
+          </button>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8, lineHeight: 1.5 }}>
+            Changing the version or loader will re-download and reinstall the server jar. Your <code>world/</code> folder is not deleted.
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="label">Server Type</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+            {SERVER_TYPES.map((s) => {
+              const selected = serverType === s.id;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => pickType(s.id)}
+                  disabled={installing}
+                  style={{
+                    padding: 10,
+                    textAlign: "left",
+                    borderRadius: 8,
+                    background: selected ? "var(--surface3)" : "var(--surface2)",
+                    border: `2px solid ${selected ? "var(--accent)" : "var(--border)"}`,
+                    color: "var(--text)",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 16 }}>{s.icon}</span>
+                    <span style={{ fontWeight: 600, fontSize: 13 }}>{s.name}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="label">Minecraft Version</div>
+          {loadingVersions ? (
+            <div style={{ color: "var(--text-muted)", padding: "8px 0" }}>Fetching versions…</div>
+          ) : fetchError ? (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{
+                color: "var(--red)", background: "#2a1515",
+                border: "1px solid var(--red)", borderRadius: 6,
+                padding: "8px 12px", fontSize: 12,
+              }}>
+                {fetchError}
+              </div>
+              <button className="btn btn-sm" style={{ marginTop: 8 }} onClick={() => loadVersionsFor(serverType)}>
+                🔄 Retry
+              </button>
+            </div>
+          ) : (
+            <select
+              value={mcVersion}
+              onChange={(e) => pickMcVersion(e.target.value)}
+              disabled={installing}
+              style={{ width: "100%", marginBottom: 14 }}
+            >
+              {(serverType === "paper" ? paperVersions : versions.map((v) => v.id)).map((v) => (
+                <option key={v} value={v}>{v}</option>
+              ))}
+            </select>
+          )}
+
+          {meta.needsLoader && (
+            <>
+              <div className="label">{serverType === "paper" ? "Paper Build" : `${meta.name} Version`}</div>
+              {loadingLoaders ? (
+                <div style={{ color: "var(--text-muted)", padding: "8px 0" }}>Fetching loaders…</div>
+              ) : loaderVersions.length === 0 ? (
+                <div style={{
+                  color: "var(--yellow)", background: "#2a2200",
+                  border: "1px solid var(--yellow)", borderRadius: 6,
+                  padding: "8px 12px", fontSize: 12, marginBottom: 14,
+                }}>
+                  No {meta.name} version found for Minecraft {mcVersion}.
+                </div>
+              ) : (
+                <select
+                  value={loaderVersion ?? ""}
+                  onChange={(e) => setLoaderVersion(e.target.value)}
+                  disabled={installing}
+                  style={{ width: "100%", marginBottom: 14 }}
+                >
+                  {loaderVersions.map((v) => (
+                    <option key={v.version} value={v.version}>{v.label}</option>
+                  ))}
+                </select>
+              )}
+            </>
+          )}
+
+          {installing && (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 12, color: "var(--blue)", marginBottom: 6 }}>
+                {progress.message || "Reinstalling…"}
+              </div>
+              <div style={{ background: "var(--surface2)", borderRadius: 4, height: 8, overflow: "hidden" }}>
+                <div style={{
+                  background: "var(--accent)", height: "100%",
+                  width: `${Math.round(progress.progress * 100)}%`,
+                  transition: "width 0.3s ease", borderRadius: 4,
+                }} />
+              </div>
+            </div>
+          )}
+
+          {installError && (
+            <div style={{
+              color: "var(--red)", background: "#2a1515",
+              border: "1px solid var(--red)", borderRadius: 6,
+              padding: "8px 12px", fontSize: 12, marginBottom: 14,
+            }}>
+              {installError}
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              className="btn btn-sm"
+              disabled={installing}
+              onClick={() => {
+                setEditing(false);
+                setServerType(config.server_type);
+                setMcVersion(config.minecraft_version);
+                setLoaderVersion(config.loader_version);
+                setInstallError("");
+              }}
+            >
+              {t("common.cancel") || "Cancel"}
+            </button>
+            <button
+              className="btn btn-primary btn-sm"
+              disabled={
+                installing ||
+                loadingVersions ||
+                loadingLoaders ||
+                (meta.needsLoader && !loaderVersion)
+              }
+              onClick={reinstall}
+            >
+              {installing ? "Reinstalling…" : "Reinstall server"}
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
