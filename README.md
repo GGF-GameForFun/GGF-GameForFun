@@ -2,8 +2,6 @@
 
 🌐 [Tiếng Việt](./README_VI.md) | English
 
-**Current small update: `v0.1.1v2`**
-
 A lightweight desktop app for hosting Minecraft servers — Vanilla, Paper, Forge, Fabric, and NeoForge — with built-in [playit.gg](https://playit.gg) tunneling so your friends can join without any router setup or port forwarding.
 
 > Built by **Aingker** · [Discord Community](https://discord.gg/bF62psq97S)
@@ -138,7 +136,24 @@ npm run tauri:build
 
 ## 📝 Dev Logs
 
-### v0.1.1 — Stability & Polish *(latest)*
+### v0.1.1-v2 — Small Update *(latest)*
+
+**`fix`** — improve playit.gg address visibility after claim/setup
+- `src-tauri/src/lib.rs` — keep polling playit API while agent is running instead of stopping after ~2 minutes
+- `src-tauri/src/playit.rs` — more robust tunnel address extraction across API response variants
+
+**`feat`** — improve Mods import flow
+- `src/components/Mods/ModManager.tsx` — drag-and-drop `.jar` import + multi-file picker import
+- `src/tauri.ts` — file dialog wrapper supports multi-select
+- `src/styles/globals.css` — removed global text-selection lock so `Ctrl/Cmd + A` works in inputs
+
+**`feat`** — uninstall cleanup option on Windows installer
+- `src-tauri/windows/hooks.nsh` + `src-tauri/tauri.conf.json` — NSIS uninstall prompt to optionally remove app/playit data and configured server directory
+
+**`docs`** — clearer onboarding and download path
+- `README.md`, `README_VI.md` — playit.gg quick guide added, install steps now point directly to Releases
+
+### v0.1.1 — Stability & Polish
 
 **`feat`** — persistent player list, console buffer, and auto-restart on crash *(`01fc1fe`)*
 - `src-tauri/src/lib.rs` — backend now tracks online players & buffers last 2000 console lines; emits `auto-restart-requested` event on unexpected exit

@@ -2,8 +2,6 @@
 
 🌐 [English](./README.md) | Tiếng Việt
 
-**Bản cập nhật nhỏ hiện tại: `v0.1.1v2`**
-
 Ứng dụng desktop nhẹ để host server Minecraft — Vanilla, Paper, Forge, Fabric và NeoForge — tích hợp sẵn [playit.gg](https://playit.gg) giúp bạn bè có thể vào chơi mà không cần cấu hình router hay mở port.
 
 > Được tạo bởi **Aingker** · [Cộng đồng Discord](https://discord.gg/bF62psq97S)
@@ -138,7 +136,24 @@ npm run tauri:build
 
 ## 📝 Nhật Ký Phát Triển
 
-### v0.1.1 — Ổn định & Hoàn thiện *(mới nhất)*
+### v0.1.1-v2 — Bản cập nhật nhỏ *(mới nhất)*
+
+**`fix`** — cải thiện hiển thị địa chỉ playit.gg sau khi claim/setup
+- `src-tauri/src/lib.rs` — tiếp tục poll API playit khi agent còn chạy, không dừng sau ~2 phút
+- `src-tauri/src/playit.rs` — parse địa chỉ tunnel chắc chắn hơn với nhiều dạng response API
+
+**`feat`** — cải thiện nhập Mod
+- `src/components/Mods/ModManager.tsx` — kéo/thả file `.jar` + chọn nhiều file cùng lúc
+- `src/tauri.ts` — wrapper file dialog hỗ trợ multi-select
+- `src/styles/globals.css` — bỏ chặn text-selection toàn cục để `Ctrl/Cmd + A` hoạt động trong input
+
+**`feat`** — tùy chọn dọn dữ liệu khi gỡ cài đặt trên Windows
+- `src-tauri/windows/hooks.nsh` + `src-tauri/tauri.conf.json` — prompt khi uninstall để tùy chọn xóa data app/playit và thư mục server đã cấu hình
+
+**`docs`** — onboarding rõ ràng hơn và tải bản phát hành dễ hơn
+- `README.md`, `README_VI.md` — thêm hướng dẫn nhanh playit.gg, bước cài đặt trỏ thẳng đến Releases
+
+### v0.1.1 — Ổn định & Hoàn thiện
 
 **`feat`** — danh sách người chơi bền vững, bộ đệm console, và tự động khởi động lại khi crash *(`01fc1fe`)*
 - `src-tauri/src/lib.rs` — backend giờ tracking người chơi online & đệm 2000 dòng console gần nhất; emit event `auto-restart-requested` khi server thoát bất ngờ
