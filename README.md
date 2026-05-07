@@ -1,5 +1,7 @@
 # 🎮 GameForFun — Minecraft Server Manager
 
+🌐 [Tiếng Việt](./README_VI.md) | English
+
 A lightweight desktop app for hosting Minecraft servers — Vanilla, Paper, Forge, Fabric, and NeoForge — with built-in [playit.gg](https://playit.gg) tunneling so your friends can join without any router setup or port forwarding.
 
 > Built by **Aingker** · [Discord Community](https://discord.gg/bF62psq97S)
