@@ -33,6 +33,16 @@ pub struct ServerConfig {
     /// Defaults to true so existing users get the new behavior automatically.
     #[serde(default = "default_true")]
     pub auto_restart: bool,
+    /// Auto-backup interval in minutes. 0 = disabled.
+    /// Defaults to 0 so existing users aren't surprised by background backups.
+    #[serde(default)]
+    pub backup_interval_minutes: u32,
+    /// Where auto-backups are written. Empty = system Downloads folder.
+    #[serde(default)]
+    pub backup_dir: String,
+    /// Whether auto-backups should include the logs/ folder.
+    #[serde(default)]
+    pub backup_include_logs: bool,
 }
 
 pub fn config_path() -> PathBuf {

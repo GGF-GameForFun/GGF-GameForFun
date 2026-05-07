@@ -11,7 +11,7 @@
 
 use std::fs::File;
 use std::io::{Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Emitter};
 use zip::write::SimpleFileOptions;
 use zip::ZipWriter;
@@ -185,4 +185,85 @@ fn walk_and_zip<W: Write + std::io::Seek>(
         // Symlinks: ignored (avoid cycles, don't follow)
     }
     Ok(())
+}
+
+/// Extract a backup ZIP into the server directory, overwriting matching files.
+/// Returns the number of files restored.
+///
+/// Safety: rejects entries with absolute paths or `..` components (zip-slip).
+pub fn restore_server_backup(
+    app: &AppHandle,
+    zip_path: &Path,
+    server_path: &Path,
+) -> Result<u64, String> {
+    if !zip_path.exists() {
+        return Err(format!("Backup file does not exist: {}", zip_path.display()));
+    }
+    std::fs::create_dir_all(server_path)
+        .map_err(|e| format!("Cannot create server dir: {}", e))?;
+
+    let file = File::open(zip_path).map_err(|e| format!("Cannot open zip: {}", e))?;
+    let mut archive = zip::ZipArchive::new(file)
+        .map_err(|e| format!("Invalid zip: {}", e))?;
+
+    let mut count: u64 = 0;
+    let mut bytes: u64 = 0;
+    let mut last_emit = std::time::Instant::now();
+    let total_entries = archive.len();
+
+    for i in 0..total_entries {
+        let mut entry = archive
+            .by_index(i)
+            .map_err(|e| format!("Read entry {}: {}", i, e))?;
+
+        let safe_path: PathBuf = match entry.enclosed_name() {
+            Some(p) => p.to_path_buf(),
+            None => continue, // unsafe path (absolute or contains `..`) — skip
+        };
+        let outpath = server_path.join(&safe_path);
+
+        if entry.is_dir() {
+            std::fs::create_dir_all(&outpath)
+                .map_err(|e| format!("mkdir {}: {}", outpath.display(), e))?;
+        } else {
+            if let Some(parent) = outpath.parent() {
+                std::fs::create_dir_all(parent)
+                    .map_err(|e| format!("mkdir {}: {}", parent.display(), e))?;
+            }
+            let mut out = File::create(&outpath)
+                .map_err(|e| format!("create {}: {}", outpath.display(), e))?;
+            let mut buf = [0u8; 64 * 1024];
+            loop {
+                let n = entry
+                    .read(&mut buf)
+                    .map_err(|e| format!("read entry: {}", e))?;
+                if n == 0 { break; }
+                out.write_all(&buf[..n])
+                    .map_err(|e| format!("write {}: {}", outpath.display(), e))?;
+                bytes += n as u64;
+            }
+            count += 1;
+
+            if last_emit.elapsed().as_millis() >= 250 || count % 32 == 0 {
+                app.emit(
+                    "restore-progress",
+                    BackupProgress {
+                        files: count,
+                        bytes,
+                        current: safe_path.to_string_lossy().to_string(),
+                    },
+                )
+                .ok();
+                last_emit = std::time::Instant::now();
+            }
+        }
+    }
+
+    app.emit(
+        "restore-progress",
+        BackupProgress { files: count, bytes, current: "done".to_string() },
+    )
+    .ok();
+
+    Ok(count)
 }
