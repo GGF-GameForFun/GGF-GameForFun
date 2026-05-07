@@ -1,217 +1,258 @@
-# 🎮 GameForFun — Quản Lý Server Minecraft
+# GameForFun
 
-🌐 [English](./README.md) | Tiếng Việt
+<p align="center">
+  <img src="./src/assets/gameforfun-logo-ui.png" alt="Logo GameForFun" width="132" />
+</p>
 
-Ứng dụng desktop nhẹ để host server Minecraft — Vanilla, Paper, Forge, Fabric và NeoForge — tích hợp sẵn [playit.gg](https://playit.gg) giúp bạn bè có thể vào chơi mà không cần cấu hình router hay mở port.
+<h3 align="center">Host server Minecraft dễ hơn cho bạn bè, cộng đồng nhỏ, và những buổi test hơi hỗn loạn.</h3>
 
-> Được tạo bởi **Aingker** · [Cộng đồng Discord](https://discord.gg/bF62psq97S)
+<p align="center">
+  <a href="./README.md">English</a>
+  ·
+  <a href="../../releases">Tải bản mới nhất</a>
+  ·
+  <a href="https://discord.gg/bF62psq97S">Discord</a>
+</p>
 
----
+GameForFun là app desktop giúp bạn host Minecraft Java server mà không cần mở port router. Chọn loại server, chọn phiên bản Minecraft, để app tự cài đặt, rồi chia sẻ địa chỉ playit.gg public cho bạn bè.
 
-## ✨ Tính Năng
+Hỗ trợ **Vanilla**, **Paper**, **Forge**, **Fabric**, và **NeoForge**.
 
-- **Cài đặt server một chạm** — chọn phiên bản, app tự tải mọi thứ
-- **5 loại server** — Vanilla, Paper, Forge, Fabric, NeoForge
-- **Console trực tiếp** — gửi lệnh, xem log theo thời gian thực
-- **Tunnel playit.gg** — địa chỉ công khai để bạn bè vào chơi, không cần mở port
-- **Quản lý người chơi** — xem danh sách online, OP hoặc kick ngay trong app
-- **Quản lý Mod / Plugin** — thêm hoặc xoá file `.jar` trực tiếp từ app
-- **Hệ thống backup** — backup ZIP một chạm với timestamp tự động
-- **Tiếng Anh & Tiếng Việt** — hỗ trợ đa ngôn ngữ đầy đủ
-- **macOS & Windows** — ứng dụng native trên cả hai nền tảng
-
----
-
-## 🪟 Cài Đặt Trên Windows
-
-### Yêu Cầu
-- Windows 10 (64-bit, build 1809 trở lên) hoặc Windows 11
-- **Không cần** cài Java trước — app tự xử lý
-
-### Các Bước
-
-1. Vào trang [**Releases**](../../releases)
-2. Mở bản phát hành mới nhất
-3. Tải asset bộ cài Windows (ví dụ `GameForFun_0.1.0_x64-setup.exe` hoặc tên mới nhất tương đương)
-4. Double-click vào file cài đặt và làm theo hướng dẫn
-
-> **Bị Windows SmartScreen chặn?** App chưa được ký số trong bản beta này. Click **More info → Run anyway**. Đây là bình thường với các app indie chưa có chứng chỉ Microsoft.
-
-Trình cài đặt sẽ tự động cài **Microsoft Edge WebView2** (yêu cầu bắt buộc của Tauri) nếu máy bạn chưa có — bước này được xử lý hoàn toàn tự động.
-
-Sau khi cài xong, mở **GameForFun** từ Start menu hoặc shortcut trên desktop và làm theo wizard thiết lập.
+> Build bởi **Aingker** · Một bầy khỉ trong sở thú
 
 ---
 
-## 🍎 Cài Đặt Trên macOS (Terminal)
+## App Làm Được Gì?
 
-### Yêu Cầu
-- macOS 10.15 Catalina trở lên (Apple Silicon hoặc Intel)
-- [Node.js 18+](https://nodejs.org)
-- [Rust](https://rustup.rs)
+| Mục | Tính năng |
+|---|---|
+| **Cài server** | Cài Vanilla, Paper, Forge, Fabric, hoặc NeoForge bằng wizard dễ dùng |
+| **Tunnel** | Tích hợp playit.gg để bạn bè join mà không cần port forwarding |
+| **Console** | Xem log live, nhập command, giữ lịch sử console |
+| **Người chơi** | Xem online, OP, kick, ban, gỡ ban, dịch chuyển |
+| **Mods / Plugins** | Thêm/xóa file `.jar` bằng upload hoặc kéo thả |
+| **Backup** | Tạo ZIP backup, phục hồi backup, và lên lịch auto-backup |
+| **Hiệu năng** | JVM preset, TPS monitor, và tạo trước chunk |
+| **Ngôn ngữ** | Giao diện Tiếng Anh và Tiếng Việt |
 
-### Các Bước
+---
 
-**1. Cài Rust** (bỏ qua nếu đã có)
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
+## Tải App
 
-**2. Cài Node.js** (bỏ qua nếu đã có)
-```bash
-brew install node
-```
+Vào trang [Releases](../../releases) và tải bản mới nhất.
 
-**3. Clone và build**
+| Nền tảng | File cần tải | Ghi chú |
+|---|---|---|
+| **Windows** | `GameForFun_*_x64-setup.exe` | Windows 10/11, 64-bit |
+| **macOS Apple Silicon** | `GameForFun_*_aarch64.dmg` | Mac M1 / M2 / M3 / M4 |
+
+App hiện vẫn là bản beta chưa ký chứng chỉ.
+
+**Windows SmartScreen:** bấm **More info → Run anyway**.<br>
+**macOS Gatekeeper:** chuột phải vào app → **Open** → **Open**.
+
+---
+
+## Lần Chạy Đầu Tiên
+
+1. Mở **GameForFun**.
+2. Chọn loại server: Vanilla, Paper, Forge, Fabric, hoặc NeoForge.
+3. Chọn phiên bản Minecraft và loader/build nếu cần.
+4. Cài tên server, thư mục, RAM, và số người chơi tối đa.
+5. Bấm **Install Server**.
+6. Vào Dashboard và bấm **Start**.
+7. Vào tab Tunnel và bật playit.gg.
+8. Nếu có claim link, bấm vào và đăng nhập playit.gg.
+9. Chia sẻ địa chỉ public tunnel cho bạn bè.
+
+Luồng cơ bản là: **cài đặt → chạy server → bật tunnel → gửi địa chỉ**.
+
+---
+
+## Hướng Dẫn Nhanh playit.gg
+
+Nếu bạn bè không vào được server, kiểm tra các mục này trước:
+
+1. Dashboard phải hiện Minecraft server đang **Online**.
+2. Tab Tunnel phải hiện playit.gg đang chạy.
+3. Tunnel trên playit.gg phải là **Minecraft Java / TCP**.
+4. Port local của tunnel phải khớp `server-port` trong `server.properties`, thường là `25565`.
+5. Dùng đúng địa chỉ GameForFun hoặc playit.gg hiển thị, gồm cả port nếu có.
+
+Nếu vừa claim xong mà địa chỉ chưa hiện ngay, giữ tab Tunnel mở thêm một chút. App sẽ tiếp tục poll playit.gg khi agent còn chạy.
+
+---
+
+## Mẹo Giảm Lag / CPU
+
+Bay creative và modpack nặng có thể tải chunk cực nhanh. Nếu CPU tăng cao:
+
+- Dùng **Settings → Performance → Low CPU**.
+- Bật **Optimized JVM flags**.
+- Giảm **View Distance** xuống `6–8`.
+- Giảm **Simulation Distance** xuống `4–6`.
+- Dùng **Pre-generate Chunks** trước khi người chơi đi khám phá xa spawn.
+
+GameForFun chạy Minecraft như một Java process bình thường. App hỗ trợ tinh chỉnh flags và settings, nhưng giới hạn CPU/RAM vẫn phụ thuộc vào máy và modpack của bạn.
+
+---
+
+## Tính Năng Chính
+
+### Điều Khiển Server
+
+- Start, stop, restart, và auto-restart khi crash
+- Chống crash-loop để server lỗi không restart vô hạn
+- Mở thư mục server trực tiếp từ app
+- Đổi phiên bản Minecraft hoặc loader trong Settings
+
+### Quản Lý Người Chơi
+
+- Danh sách người chơi online
+- Danh sách người vừa tham gia
+- Avatar đầu Minecraft
+- OP / bỏ OP
+- Kick
+- Ban
+- Danh sách người chơi bị ban
+- Gỡ ban
+- Dịch chuyển người chơi
+
+### Công Cụ
+
+- ZIP backup thủ công
+- Phục hồi từ file backup ZIP
+- Auto-backup theo lịch
+- Xuất debug report
+- Tạo trước chunk để giảm lag khi khám phá
+
+---
+
+## Build Từ Source
+
+Yêu cầu:
+
+- Node.js 18+
+- Rust stable
+- Dependencies Tauri theo hệ điều hành
+
 ```bash
 git clone https://github.com/GGF-GameForFun/GGF-GameForFun.git
 cd GGF-GameForFun
 npm install
-npm run tauri:build
-```
 
-**4. Mở app**
-
-Sau khi build xong, mở file `.dmg`:
-```
-src-tauri/target/release/bundle/dmg/GameForFun_0.1.0_aarch64.dmg
-```
-
-Double-click vào `.dmg`, kéo **GameForFun** vào thư mục Applications và mở lên.
-
-> **Bị Gatekeeper chặn?** Right-click vào app → **Open** → click **Open** trong hộp thoại. Chỉ cần làm một lần vì app chưa được ký số trong bản beta.
-
----
-
-## 🚀 Lần Đầu Chạy App
-
-1. Wizard kiểm tra Java — cài Java 17+ từ [adoptium.net](https://adoptium.net) nếu được yêu cầu
-2. Chọn loại server (Vanilla / Paper / Forge / Fabric / NeoForge)
-3. Chọn phiên bản Minecraft
-4. Đặt tên server, đường dẫn cài đặt và dung lượng RAM
-5. Bấm **Install** — app tự tải mọi thứ
-6. Sau khi xong, bấm **▶ Start** trên Dashboard
-7. Mở tab **Tunnel** và bấm **▶ Start**
-8. Nếu hiện **claim URL**, bấm vào và đăng nhập trên playit.gg
-9. Trên playit.gg, tạo tunnel loại **Minecraft Java** và đặt local port là `25565` (hoặc đúng port server của bạn)
-10. Quay lại GameForFun và chờ card Tunnel hiển thị địa chỉ public
-11. Chia sẻ địa chỉ đó cho bạn bè (`domain:port` nếu có port)
-
-## 🌐 Hướng Dẫn Nhanh playit.gg (Quan Trọng)
-
-Nhiều người dùng bị thiếu 1 bước nên tunnel chạy nhưng bạn bè vẫn không vào được.
-
-1. Bật Minecraft server trước (Dashboard phải hiện **Online**).
-2. Mở tab **Tunnel** và bật playit agent.
-3. Nếu có claim URL thì hoàn tất claim.
-4. Trong dashboard playit, tunnel type phải là **Minecraft Java (TCP)**.
-5. Local address phải trỏ đúng máy/port server (`127.0.0.1:25565` hoặc LAN IP + server port).
-6. Chờ GameForFun hiển thị địa chỉ trong card Tunnel.
-7. Nếu chưa thấy địa chỉ ngay, giữ tab Tunnel mở thêm một lúc sau khi claim.
-
-Nếu bạn bè không kết nối được:
-
-1. Kiểm tra server còn chạy ổn định.
-2. Kiểm tra local port tunnel trùng `server-port` trong `server.properties`.
-3. Thử dùng trực tiếp `IP:PORT` từ playit dashboard.
-4. Tắt/bật lại Tunnel một lần.
-
----
-
-## 🛠 Build Từ Source (Dành Cho Dev)
-
-```bash
-git clone https://github.com/GGF-GameForFun/GGF-GameForFun.git
-cd GGF-GameForFun
-npm install
-
-# Chế độ dev với hot reload
+# Dev preview trên browser
 npm run dev
 
-# Build native đầy đủ (.dmg trên macOS, .exe trên Windows)
+# Native Tauri dev app
+npm run tauri:dev
+
+# Build bản release native
 npm run tauri:build
+```
+
+File build nằm trong:
+
+```text
+src-tauri/target/release/bundle/
 ```
 
 ---
 
-## 📝 Nhật Ký Phát Triển
+## Trạng Thái Dự Án
 
-### v0.1.2-dev — Thương hiệu, Hiệu năng & Công cụ Admin *(mới nhất)*
+GameForFun đang ở giai đoạn beta. Trọng tâm hiện tại:
 
-**`feat`** — làm mới thương hiệu và giao diện *(`2515ccf`)*
-- `src-tauri/icons/**` — thay toàn bộ bộ icon native bằng logo GameForFun mới
-- `src/assets/gameforfun-logo-ui.png` — thêm logo nhẹ dùng trong sidebar
-- `src/components/Layout.tsx` — sidebar dùng logo mới và subtitle “Monkey Zoo Crew” / “Một bầy khỉ trong sở thú”
-- `src/styles/globals.css` — đổi theme tối sang tông xanh-tím khớp với logo
-- `src/components/InfoPopup.tsx`, `src/components/Mods/ModManager.tsx`, `src/components/Players/Players.tsx` — cập nhật màu nhấn, không còn bị một màu xanh lá như trước
+- UI sạch và dễ dùng hơn
+- giảm tài nguyên sử dụng
+- workflow tốt hơn cho server modded
+- backup/restore an toàn hơn
+- onboarding playit.gg mượt hơn
 
-**`feat`** — giảm CPU spike của server bằng tuỳ chọn hiệu năng
-- `src-tauri/src/config.rs` — thêm `optimized_jvm_flags` và `performance_preset`
-- `src-tauri/src/lib.rs` — khi chạy server sẽ áp dụng JVM flags G1GC tối ưu cho Minecraft; Forge/NeoForge được quản lý qua `user_jvm_args.txt`
-- `src/components/Settings/ServerSettings.tsx` — thêm card Hiệu năng với các preset Cân bằng / Tiết kiệm CPU / Modpack nặng / Hiệu năng tối đa
-- `src-tauri/src/lib.rs` — server mới sẽ có mặc định nhẹ CPU hơn (`view-distance`, `simulation-distance`)
+Ý tưởng tương lai:
 
-**`perf`** — giảm lượng render trong app
-- `src/components/Console/Console.tsx` — console chỉ render vùng log mới nhất nhưng vẫn giữ buffer backend đầy đủ
-- `src/components/Layout.tsx` — bỏ remount trang khi đổi tab để giảm churn state không cần thiết
-
-**`feat`** — cải thiện quản lý người chơi
-- `src/components/Players/Players.tsx` — thêm mục Người Chơi Bị Ban, hiển thị thông tin ban và nút Gỡ ban
-- `src-tauri/src/lib.rs` — thêm `get_banned_players` và `unban_player`; gỡ ban sửa trực tiếp `banned-players.json` và gửi `pardon` nếu server đang chạy
-- `src/types.ts`, `src/tauriMock.ts`, `src/i18n.ts` — thêm type, mock và bản dịch EN/VI cho danh sách ban
-
-**`fix`** — hoàn thiện các câu chưa được dịch
-- `src/i18n.ts`, `src/App.tsx`, `src/components/Console/Console.tsx`, `src/components/Mods/ModManager.tsx`, `src/components/Setup/SetupWizard.tsx`, `src/components/Settings/ServerSettings.tsx`, `src/components/CreditPopup.tsx` — chuyển các text còn hardcode sang hệ thống localization
-
-### v0.1.1-v2 — Bản cập nhật nhỏ
-
-**`fix`** — cải thiện hiển thị địa chỉ playit.gg sau khi claim/setup
-- `src-tauri/src/lib.rs` — tiếp tục poll API playit khi agent còn chạy, không dừng sau ~2 phút
-- `src-tauri/src/playit.rs` — parse địa chỉ tunnel chắc chắn hơn với nhiều dạng response API
-
-**`feat`** — cải thiện nhập Mod
-- `src/components/Mods/ModManager.tsx` — kéo/thả file `.jar` + chọn nhiều file cùng lúc
-- `src/tauri.ts` — wrapper file dialog hỗ trợ multi-select
-- `src/styles/globals.css` — bỏ chặn text-selection toàn cục để `Ctrl/Cmd + A` hoạt động trong input
-
-**`feat`** — tùy chọn dọn dữ liệu khi gỡ cài đặt trên Windows
-- `src-tauri/windows/hooks.nsh` + `src-tauri/tauri.conf.json` — prompt khi uninstall để tùy chọn xóa data app/playit và thư mục server đã cấu hình
-
-**`docs`** — onboarding rõ ràng hơn và tải bản phát hành dễ hơn
-- `README.md`, `README_VI.md` — thêm hướng dẫn nhanh playit.gg, bước cài đặt trỏ thẳng đến Releases
-
-### v0.1.1 — Ổn định & Hoàn thiện
-
-**`feat`** — danh sách người chơi bền vững, bộ đệm console, và tự động khởi động lại khi crash *(`01fc1fe`)*
-- `src-tauri/src/lib.rs` — backend giờ tracking người chơi online & đệm 2000 dòng console gần nhất; emit event `auto-restart-requested` khi server thoát bất ngờ
-- `src-tauri/src/server.rs` — thêm flag `stop_requested` để phân biệt rõ user dừng hay server crash
-- `src-tauri/src/config.rs` — thêm field `auto_restart` (mặc định bật)
-- `src/App.tsx` — lắng nghe `auto-restart-requested` ở cấp app và tự gọi lại `start_server`
-- `src/components/Players/Players.tsx` — load lại từ backend khi mount; subscribe event `players-update` thay vì parse log
-- `src/components/Console/Console.tsx` — load lại từ buffer backend khi mount; nút **Clear** cũng xóa buffer backend
-- `src/components/Settings/ServerSettings.tsx` — thêm toggle bật/tắt auto-restart trong phần App config
-- `src/types.ts`, `src/tauriMock.ts`, `src/components/Setup/SetupWizard.tsx` — thêm `auto_restart` vào `ServerConfig`
-
-**`feat`** — đổi loại server, phiên bản MC, mod loader từ Settings *(`f094419`)*
-- `src/components/Settings/ServerSettings.tsx` — thêm component `VersionChangeCard` cho phép người dùng chuyển giữa Vanilla / Paper / Forge / Fabric / NeoForge hoặc chọn phiên bản MC khác mà không cần làm lại Setup
-
-**`fix`** — hiển thị lỗi và luôn điều hướng khi fetch version thất bại *(`6e36dfd`)*
-- `src/components/Setup/SetupWizard.tsx` — thêm state `fetchError` + nút Retry để khi gọi API Mojang/PaperMC fail thì các nút không bị "chết" im lặng
-
-### v0.1.0 — Bản Phát Hành Đầu Tiên
-
-**`feat`** — bản public đầu tiên *(`2ba097e`)*
-- Khung dự án đầy đủ: React + Tauri + Rust backend
-- Vòng đời server, console, người chơi, mods, settings, tunnel, backup, export debug
-- Hỗ trợ song ngữ Tiếng Anh & Tiếng Việt
+- kiểm tra cập nhật server
+- cài modpack tự động
+- biểu đồ TPS và tài nguyên chi tiết hơn
+- thông báo Discord
+- hỗ trợ nhiều server
 
 ---
 
-## 💬 Cộng Đồng & Hỗ Trợ
+## Nhật Ký Phát Triển
 
-Tham gia Discord để được hỗ trợ, cập nhật tin tức mới nhất và giao lưu:
-**[discord.gg/bF62psq97S](https://discord.gg/bF62psq97S)**
+<details>
+<summary><strong>v0.1.2-dev — Thương hiệu, Hiệu năng & Công cụ Admin</strong></summary>
+
+### Thương hiệu và UI
+
+- Thay icon app native bằng logo GameForFun mới.
+- Thêm logo nhẹ cho sidebar.
+- Làm mới UI với theme tối xanh-tím.
+- Cập nhật sidebar với subtitle “Monkey Zoo Crew” / “Một bầy khỉ trong sở thú”.
+
+### Hiệu năng
+
+- Thêm preset: Cân bằng, Tiết kiệm CPU, Modpack nặng, Hiệu năng tối đa.
+- Thêm toggle JVM flags tối ưu.
+- Áp dụng G1GC flags dành cho Minecraft khi chạy server.
+- Quản lý JVM flags cho Forge / NeoForge qua `user_jvm_args.txt`.
+- Giảm render console bằng cách chỉ hiển thị vùng log mới nhất.
+- Bỏ remount trang không cần thiết khi đổi tab.
+
+### Admin Người Chơi
+
+- Thêm danh sách người chơi bị ban.
+- Gỡ ban ổn định hơn: sửa trực tiếp `banned-players.json` và gửi `pardon` nếu server đang chạy.
+- Hiển thị thông tin ban.
+
+### Localization
+
+- Chuyển các text còn hardcode sang hệ thống dịch EN/VI.
+
+</details>
+
+<details>
+<summary><strong>v0.1.1-v2 — playit.gg và Installer ổn định hơn</strong></summary>
+
+- Cải thiện polling địa chỉ playit.gg sau khi claim/setup.
+- Parse địa chỉ tunnel chắc hơn từ API playit.gg.
+- Thêm kéo-thả `.jar`.
+- Thêm chọn nhiều file mod/plugin.
+- Thêm prompt dọn dữ liệu khi uninstall trên Windows.
+- Cập nhật docs trỏ người dùng đến GitHub Releases.
+
+</details>
+
+<details>
+<summary><strong>v0.1.1 — Ổn định & Hoàn thiện</strong></summary>
+
+- Theo dõi người chơi online bền vững.
+- Buffer console ở backend.
+- Auto-restart khi crash.
+- Đổi server type/version/loader từ Settings.
+- Hiển thị lỗi rõ hơn khi fetch version thất bại.
+
+</details>
+
+<details>
+<summary><strong>v0.1.0 — Bản đầu tiên</strong></summary>
+
+- Scaffold app React + Tauri + Rust.
+- Điều khiển vòng đời server.
+- Console, Players, Mods, Settings, Tunnel, Backup, Debug Export.
+- Localization Tiếng Anh và Tiếng Việt.
+
+</details>
 
 ---
 
-*GameForFun là dự án cộng đồng. Nếu bạn thấy app hữu ích, hãy ủng hộ mình qua mã QR trong phần About của app nhé ❤️*
+## Cộng Đồng
+
+Cần hỗ trợ, muốn test bản mới, hoặc chỉ muốn vào chơi?
+
+Tham gia Discord: **[discord.gg/bF62psq97S](https://discord.gg/bF62psq97S)**
+
+---
+
+GameForFun là dự án cộng đồng. Nếu bạn thấy app hữu ích, trong app có mã QR donate ở phần About.
