@@ -12,6 +12,8 @@ export default function Console() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    // Hydrate from backend buffer so history survives tab switches and component remounts
+    invoke<string[]>("get_console_buffer").then(setLines).catch(() => {});
     const unlisten = listen<string>("mc-line", (e) => {
       setLines((l) => [...l.slice(-2000), e.payload]);
     });
@@ -86,7 +88,10 @@ export default function Console() {
         <h2 style={{ fontSize: 18, fontWeight: 700 }}>{t("console.title")}</h2>
         <button
           className="btn btn-sm"
-          onClick={() => setLines([])}
+          onClick={async () => {
+            setLines([]);
+            try { await invoke("clear_console_buffer"); } catch {}
+          }}
           style={{ color: "var(--text-muted)" }}
         >
           {t("common.clear")}

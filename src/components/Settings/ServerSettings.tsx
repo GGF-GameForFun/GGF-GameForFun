@@ -113,6 +113,32 @@ export default function ServerSettings({ config, onSave }: Props) {
           </div>
         </div>
 
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginBottom: 14,
+            cursor: "pointer",
+            padding: "10px 12px",
+            background: "var(--surface2)",
+            borderRadius: "var(--radius-sm)",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={form.auto_restart}
+            onChange={(e) => setForm((f) => ({ ...f, auto_restart: e.target.checked }))}
+            style={{ width: "auto", padding: 0, margin: 0 }}
+          />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>♻ Auto-restart on crash</div>
+            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+              If the server exits unexpectedly, restart it automatically. Stops if it crashes 3+ times in 5 minutes.
+            </div>
+          </div>
+        </label>
+
         <button className="btn btn-primary btn-sm" onClick={saveConfig}>
           {saved ? `✓ ${t("common.saved")}` : t("common.save")}
         </button>

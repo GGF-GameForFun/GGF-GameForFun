@@ -1,6 +1,8 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
+
+const CONSOLE_BUFFER_CAP: usize = 2000;
 
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
@@ -27,6 +29,53 @@ pub struct AppState {
     pub server: Mutex<ServerManager>,
     pub playit: Mutex<PlayitState>,
     pub stats: Mutex<ServerStats>,
+    pub online_players: Mutex<HashSet<String>>,
+    pub console_buffer: Mutex<VecDeque<String>>,
+    /// Timestamps of recent auto-restarts. Used to detect crash loops.
+    pub recent_auto_restarts: Mutex<VecDeque<std::time::Instant>>,
+}
+
+/// Window in which we count restarts (5 minutes), and the max we allow.
+/// Beyond this, we consider it a crash loop and stop restarting.
+const RESTART_WINDOW_SECS: u64 = 300;
+const MAX_RESTARTS_IN_WINDOW: usize = 3;
+
+async fn push_console_line(state: &AppState, line: String) {
+    let mut buf = state.console_buffer.lock().await;
+    if buf.len() >= CONSOLE_BUFFER_CAP { buf.pop_front(); }
+    buf.push_back(line);
+}
+
+/// Parse a player name out of a "joined the game" / "left the game" / "lost connection" line.
+/// MC log format example: "...MinecraftServer/]: Fishgod212 joined the game"
+fn parse_player_event(line: &str) -> Option<(String, bool)> {
+    // Returns (name, is_join)
+    let body = line.rsplit("]:").next()?.trim();
+    if let Some(name) = body.strip_suffix(" joined the game") {
+        let n = name.trim();
+        if is_valid_player_name(n) { return Some((n.to_string(), true)); }
+    }
+    if let Some(name) = body.strip_suffix(" left the game") {
+        let n = name.trim();
+        if is_valid_player_name(n) { return Some((n.to_string(), false)); }
+    }
+    if let Some(rest) = body.strip_suffix(": Disconnected") {
+        if let Some(name) = rest.strip_suffix(" lost connection") {
+            let n = name.trim();
+            if is_valid_player_name(n) { return Some((n.to_string(), false)); }
+        }
+    }
+    // Generic "<name> lost connection: <reason>"
+    if let Some(idx) = body.find(" lost connection:") {
+        let n = body[..idx].trim();
+        if is_valid_player_name(n) { return Some((n.to_string(), false)); }
+    }
+    None
+}
+
+fn is_valid_player_name(s: &str) -> bool {
+    let len = s.chars().count();
+    (2..=16).contains(&len) && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
 
 // ── Helper types ──────────────────────────────────────────────────────────────
@@ -477,12 +526,19 @@ async fn install_neoforge(app: &AppHandle, cfg: &ServerConfig, server_dir: &Path
 // ── Server runtime ────────────────────────────────────────────────────────────
 
 #[tauri::command]
-async fn start_server(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+async fn start_server(app: AppHandle) -> Result<(), String> {
+    do_start_server(app).await
+}
+
+/// The actual start logic, callable both from the public command and from the
+/// auto-restart task on the wait-for-child handler.
+async fn do_start_server(app: AppHandle) -> Result<(), String> {
     let cfg = config::load_config();
     if !cfg.setup_complete {
         return Err("Server not set up yet".to_string());
     }
     {
+        let state = app.state::<AppState>();
         let srv = state.server.lock().await;
         if srv.status != ServerStatus::Stopped {
             return Err("Server is already running".to_string());
@@ -503,9 +559,12 @@ async fn start_server(app: AppHandle, state: State<'_, AppState>) -> Result<(), 
             }
         });
     let java_home = java::java_home_from_bin(&java_bin);
-    app.emit("mc-line",
-        format!("[mchost] Using Java {} at {}", required_major, java_bin.display())
-    ).ok();
+    let banner = format!("[mchost] Using Java {} at {}", required_major, java_bin.display());
+    {
+        let s = app.state::<AppState>();
+        push_console_line(&s, banner.clone()).await;
+    }
+    app.emit("mc-line", &banner).ok();
 
     let mut cmd = match cfg.server_type {
         ServerType::Forge | ServerType::NeoForge => {
@@ -557,9 +616,11 @@ async fn start_server(app: AppHandle, state: State<'_, AppState>) -> Result<(), 
     let pid = child.id();
 
     {
+        let state = app.state::<AppState>();
         let mut srv = state.server.lock().await;
         srv.stdin = Some(stdin); srv.pid = pid;
         srv.status = ServerStatus::Starting;
+        srv.stop_requested = false;
     }
     app.emit("server-status", ServerStatus::Starting).ok();
 
@@ -594,16 +655,23 @@ async fn start_server(app: AppHandle, state: State<'_, AppState>) -> Result<(), 
             }
 
             // Player join/leave parsing — vanilla, paper, forge, fabric all use same format
-            if line.contains("joined the game") {
+            if let Some((name, is_join)) = parse_player_event(&line) {
                 let s = app3.state::<AppState>();
+                let mut players = s.online_players.lock().await;
+                if is_join { players.insert(name); }
+                else       { players.remove(&name); }
+                let list: Vec<String> = players.iter().cloned().collect();
+                let count = players.len() as u32;
+                drop(players);
+
                 let mut st = s.stats.lock().await;
-                st.players_online = st.players_online.saturating_add(1);
+                st.players_online = count;
                 app3.emit("server-stats", st.clone()).ok();
-            } else if line.contains("left the game") || line.contains("lost connection") {
+                app3.emit("players-update", &list).ok();
+            }
+            {
                 let s = app3.state::<AppState>();
-                let mut st = s.stats.lock().await;
-                st.players_online = st.players_online.saturating_sub(1);
-                app3.emit("server-stats", st.clone()).ok();
+                push_console_line(&s, line.clone()).await;
             }
             app3.emit("mc-line", &line).ok();
         }
@@ -616,6 +684,10 @@ async fn start_server(app: AppHandle, state: State<'_, AppState>) -> Result<(), 
         let mut st = s.stats.lock().await;
         *st = ServerStats::default();
         app3.emit("server-stats", st.clone()).ok();
+        // Reset player roster on stop
+        let mut players = s.online_players.lock().await;
+        players.clear();
+        app3.emit("players-update", Vec::<String>::new()).ok();
     });
 
     let app4 = app.clone();
@@ -623,7 +695,12 @@ async fn start_server(app: AppHandle, state: State<'_, AppState>) -> Result<(), 
         let reader = BufReader::new(stderr);
         let mut lines = reader.lines();
         while let Ok(Some(line)) = lines.next_line().await {
-            app4.emit("mc-line", format!("[ERR] {}", line)).ok();
+            let formatted = format!("[ERR] {}", line);
+            {
+                let s = app4.state::<AppState>();
+                push_console_line(&s, formatted.clone()).await;
+            }
+            app4.emit("mc-line", &formatted).ok();
         }
     });
 
@@ -631,11 +708,62 @@ async fn start_server(app: AppHandle, state: State<'_, AppState>) -> Result<(), 
     tokio::spawn(async move {
         let _ = child.wait().await;
         let s = app5.state::<AppState>();
-        let mut srv = s.server.lock().await;
-        if srv.status != ServerStatus::Stopped {
-            srv.status = ServerStatus::Stopped;
-            srv.stdin = None; srv.pid = None;
-            app5.emit("server-status", ServerStatus::Stopped).ok();
+
+        // The user-initiated stop_server / restart_server commands set
+        // `stop_requested = true`. If it's still false here, the process exited
+        // on its own — which we treat as a crash and may auto-restart.
+        let was_unexpected = {
+            let srv = s.server.lock().await;
+            !srv.stop_requested
+        };
+
+        {
+            let mut srv = s.server.lock().await;
+            if srv.status != ServerStatus::Stopped {
+                srv.status = ServerStatus::Stopped;
+                srv.stdin = None;
+                srv.pid = None;
+                app5.emit("server-status", ServerStatus::Stopped).ok();
+            }
+        }
+
+        // Auto-restart if enabled in config and the exit was unexpected.
+        let cfg_now = config::load_config();
+        if was_unexpected && cfg_now.auto_restart {
+            // Crash-loop guard: at most MAX_RESTARTS_IN_WINDOW restarts in RESTART_WINDOW_SECS.
+            let now = std::time::Instant::now();
+            let window = std::time::Duration::from_secs(RESTART_WINDOW_SECS);
+            let allow = {
+                let mut hist = s.recent_auto_restarts.lock().await;
+                while let Some(&front) = hist.front() {
+                    if now.duration_since(front) > window { hist.pop_front(); } else { break; }
+                }
+                if hist.len() >= MAX_RESTARTS_IN_WINDOW {
+                    false
+                } else {
+                    hist.push_back(now);
+                    true
+                }
+            };
+
+            if !allow {
+                let msg = format!(
+                    "[mchost] Auto-restart disabled — server crashed {}+ times in {} seconds. Fix the issue and start manually.",
+                    MAX_RESTARTS_IN_WINDOW, RESTART_WINDOW_SECS
+                );
+                push_console_line(&s, msg.clone()).await;
+                app5.emit("mc-line", &msg).ok();
+                return;
+            }
+
+            let msg = "[mchost] Server exited unexpectedly. Auto-restart in 3s…".to_string();
+            push_console_line(&s, msg.clone()).await;
+            app5.emit("mc-line", &msg).ok();
+            // Tell the frontend to invoke start_server again. The frontend is
+            // responsible for the actual restart call — this avoids Send
+            // issues that would arise from calling do_start_server() from
+            // inside this spawned task.
+            app5.emit("auto-restart-requested", 3000_u32).ok();
         }
     });
 
@@ -742,10 +870,27 @@ async fn get_server_stats(state: State<'_, AppState>) -> Result<ServerStats, Str
 }
 
 #[tauri::command]
+async fn get_online_players(state: State<'_, AppState>) -> Result<Vec<String>, String> {
+    Ok(state.online_players.lock().await.iter().cloned().collect())
+}
+
+#[tauri::command]
+async fn get_console_buffer(state: State<'_, AppState>) -> Result<Vec<String>, String> {
+    Ok(state.console_buffer.lock().await.iter().cloned().collect())
+}
+
+#[tauri::command]
+async fn clear_console_buffer(state: State<'_, AppState>) -> Result<(), String> {
+    state.console_buffer.lock().await.clear();
+    Ok(())
+}
+
+#[tauri::command]
 async fn stop_server(state: State<'_, AppState>) -> Result<(), String> {
     let mut srv = state.server.lock().await;
     match srv.status {
         ServerStatus::Running | ServerStatus::Starting => {
+            srv.stop_requested = true;
             if let Some(stdin) = &mut srv.stdin {
                 stdin.write_all(b"stop\n").await.map_err(|e| e.to_string())?;
             }
@@ -761,8 +906,7 @@ async fn restart_server(app: AppHandle) -> Result<(), String> {
     let state = app.state::<AppState>();
     stop_server(state).await?;
     tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
-    let state2 = app.state::<AppState>();
-    start_server(app.clone(), state2).await
+    do_start_server(app).await
 }
 
 #[tauri::command]
@@ -1145,13 +1289,17 @@ pub fn run() {
             server: Mutex::new(ServerManager::new()),
             playit: Mutex::new(PlayitState::new()),
             stats: Mutex::new(ServerStats::default()),
+            online_players: Mutex::new(HashSet::new()),
+            console_buffer: Mutex::new(VecDeque::with_capacity(CONSOLE_BUFFER_CAP)),
+            recent_auto_restarts: Mutex::new(VecDeque::new()),
         })
         .invoke_handler(tauri::generate_handler![
             get_config, save_config, check_java,
             fetch_mc_versions, fetch_paper_versions, fetch_paper_builds,
             fetch_forge_versions, fetch_fabric_versions, fetch_neoforge_versions,
             install_server, start_server, stop_server, restart_server,
-            send_command, get_server_status, get_server_stats,
+            send_command, get_server_status, get_server_stats, get_online_players,
+            get_console_buffer, clear_console_buffer,
             list_mods, add_mod, remove_mod,
             get_server_properties, save_server_properties,
             setup_playit, start_playit, stop_playit, get_playit_status,

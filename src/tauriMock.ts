@@ -11,6 +11,7 @@ const MOCK_CONFIG: ServerConfig = {
   max_players: 10,
   server_name: "My Minecraft Server",
   setup_complete: true,
+  auto_restart: true,
 };
 
 const handlers: Record<string, (...args: unknown[]) => unknown> = {

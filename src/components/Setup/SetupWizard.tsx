@@ -37,6 +37,7 @@ export default function SetupWizard({ onComplete }: Props) {
     max_players: 10,
     server_name: "My Minecraft Server",
     server_path: "",
+    auto_restart: true,
   });
 
   const [progress, setProgress] = useState<InstallProgress>({ message: "", progress: 0 });

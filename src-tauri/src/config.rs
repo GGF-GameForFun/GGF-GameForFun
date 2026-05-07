@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+fn default_true() -> bool { true }
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum ServerType {
@@ -27,6 +29,10 @@ pub struct ServerConfig {
     pub max_players: u32,
     pub server_name: String,
     pub setup_complete: bool,
+    /// Auto-restart the server when it exits unexpectedly (not via Stop button).
+    /// Defaults to true so existing users get the new behavior automatically.
+    #[serde(default = "default_true")]
+    pub auto_restart: bool,
 }
 
 pub fn config_path() -> PathBuf {

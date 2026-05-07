@@ -3,14 +3,6 @@ import { invoke, listen } from "../../tauri";
 import { ServerStatus } from "../../types";
 import { useT } from "../../i18n";
 
-// Parse player join/leave from MC log lines.
-// Vanilla / Paper / Forge / Fabric all emit:
-//   "[Server thread/INFO]: PlayerName joined the game"
-//   "[Server thread/INFO]: PlayerName left the game"
-//   "[Server thread/INFO]: PlayerName lost connection: ..."
-const JOIN_RE  = /:\s*([A-Za-z0-9_]{2,16})\s+joined the game/;
-const LEAVE_RE = /:\s*([A-Za-z0-9_]{2,16})\s+(?:left the game|lost connection)/;
-
 interface Confirm {
   message: string;
   onYes: () => void;
@@ -25,26 +17,24 @@ export default function Players() {
 
   useEffect(() => {
     invoke<ServerStatus>("get_server_status").then(setStatus).catch(() => {});
+    // Hydrate from backend on mount so we don't miss players who joined before this tab opened
+    invoke<string[]>("get_online_players").then((list) => setPlayers(list.sort())).catch(() => {});
+
     const u1 = listen<ServerStatus>("server-status", (e) => {
       setStatus(e.payload);
-      // Reset roster when server stops
       if (e.payload === "stopped") {
         setPlayers([]);
         setOps(new Set());
       }
     });
-    const u2 = listen<string>("mc-line", (e) => {
-      const line = e.payload;
-      const join = line.match(JOIN_RE);
-      const leave = line.match(LEAVE_RE);
-      if (join) {
-        const name = join[1];
-        setPlayers((p) => p.includes(name) ? p : [...p, name]);
-      } else if (leave) {
-        const name = leave[1];
-        setPlayers((p) => p.filter((x) => x !== name));
-        setOps((o) => { const n = new Set(o); n.delete(name); return n; });
-      }
+    const u2 = listen<string[]>("players-update", (e) => {
+      setPlayers([...e.payload].sort());
+      // Drop ops for players who left
+      setOps((o) => {
+        const n = new Set<string>();
+        for (const name of o) if (e.payload.includes(name)) n.add(name);
+        return n;
+      });
     });
     return () => { u1.then((f) => f()); u2.then((f) => f()); };
   }, []);

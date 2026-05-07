@@ -11,6 +11,7 @@ export interface ServerConfig {
   max_players: number;
   server_name: string;
   setup_complete: boolean;
+  auto_restart: boolean;
 }
 
 export interface McVersion {

@@ -14,6 +14,10 @@ pub struct ServerManager {
     pub status: ServerStatus,
     pub stdin: Option<ChildStdin>,
     pub pid: Option<u32>,
+    /// True when the user explicitly clicked Stop (or Restart). False when the
+    /// server exited on its own (crash). The wait task uses this to decide
+    /// whether to trigger an auto-restart.
+    pub stop_requested: bool,
 }
 
 impl ServerManager {
@@ -22,6 +26,7 @@ impl ServerManager {
             status: ServerStatus::Stopped,
             stdin: None,
             pid: None,
+            stop_requested: false,
         }
     }
 }
