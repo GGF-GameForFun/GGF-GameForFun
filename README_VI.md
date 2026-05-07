@@ -32,11 +32,10 @@
 
 ### Các Bước
 
-1. Vào tab [**Actions**](../../actions) trên trang này
-2. Click vào lần chạy **Build Windows Installer** thành công gần nhất
-3. Kéo xuống phần **Artifacts** và tải **GameForFun-Windows-Installer.zip**
-4. Giải nén — bên trong có file `GameForFun_0.1.0_x64-setup.exe`
-5. Double-click vào file cài đặt và làm theo hướng dẫn
+1. Vào trang [**Releases**](../../releases)
+2. Mở bản phát hành mới nhất
+3. Tải asset bộ cài Windows (ví dụ `GameForFun_0.1.0_x64-setup.exe` hoặc tên mới nhất tương đương)
+4. Double-click vào file cài đặt và làm theo hướng dẫn
 
 > **Bị Windows SmartScreen chặn?** App chưa được ký số trong bản beta này. Click **More info → Run anyway**. Đây là bình thường với các app indie chưa có chứng chỉ Microsoft.
 

@@ -32,11 +32,10 @@ A lightweight desktop app for hosting Minecraft servers — Vanilla, Paper, Forg
 
 ### Steps
 
-1. Go to the [**Actions**](../../actions) tab on this page
-2. Click the latest successful **Build Windows Installer** run
-3. Scroll down to **Artifacts** and download **GameForFun-Windows-Installer.zip**
-4. Extract the zip — you'll find `GameForFun_0.1.0_x64-setup.exe`
-5. Double-click the installer and follow the wizard
+1. Go to the [**Releases**](../../releases) page
+2. Open the latest release
+3. Download the Windows installer asset (for example `GameForFun_0.1.0_x64-setup.exe` or the latest equivalent)
+4. Double-click the installer and follow the wizard
 
 > **Windows SmartScreen warning?** The app is unsigned in this beta. Click **More info → Run anyway**. This is normal for indie apps without a Microsoft certificate.
 
