@@ -182,6 +182,15 @@ GameForFun đang ở giai đoạn beta. Trọng tâm hiện tại:
 ## Nhật Ký Phát Triển
 
 <details open>
+<summary><strong>v0.1.4-dev — Tunnel Ổn Định Hơn & Polish Test</strong></summary>
+
+- Thêm nút refresh thủ công cho địa chỉ public playit.gg.
+- Hiển thị trạng thái chờ rõ hơn khi playit.gg đang chạy nhưng chưa có địa chỉ public.
+- Xoá helper Temurin Java không dùng tới để Rust check gọn hơn.
+
+</details>
+
+<details open>
 <summary><strong>v0.1.3 — Polish Windows, Cập Nhật & Sửa Tunnel</strong></summary>
 
 - Thêm emoji thân thiện hơn cho trang GitHub.

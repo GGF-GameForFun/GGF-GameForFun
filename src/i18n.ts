@@ -89,6 +89,10 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
     "tunnel.shareHint": "Share this with friends — they connect to it in Minecraft as a server address.",
     "tunnel.agentLog": "playit.gg Agent Log",
     "tunnel.logPlaceholder": "playit.gg agent output will appear here when the tunnel is running…",
+    "tunnel.waitingAddress": "Waiting for public playit.gg address…",
+    "tunnel.waitingAddressHint": "The agent is running, but playit.gg has not returned a public Minecraft address yet. Claim the tunnel if needed, then refresh.",
+    "tunnel.refreshAddress": "Refresh address",
+    "tunnel.refreshingAddress": "Refreshing tunnel address…",
 
     // Players
     "players.title": "Players",
@@ -328,6 +332,10 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
     "tunnel.shareHint": "Chia sẻ địa chỉ này cho bạn bè — họ dùng nó để kết nối trong Minecraft.",
     "tunnel.agentLog": "Log agent playit.gg",
     "tunnel.logPlaceholder": "Log của agent playit.gg sẽ xuất hiện ở đây khi tunnel chạy…",
+    "tunnel.waitingAddress": "Đang chờ địa chỉ public playit.gg…",
+    "tunnel.waitingAddressHint": "Agent đang chạy, nhưng playit.gg chưa trả về địa chỉ Minecraft public. Claim tunnel nếu cần, rồi refresh.",
+    "tunnel.refreshAddress": "Refresh địa chỉ",
+    "tunnel.refreshingAddress": "Đang refresh địa chỉ tunnel…",
 
     "players.title": "Người chơi",
     "players.online": "Đang online",

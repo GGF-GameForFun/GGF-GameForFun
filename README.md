@@ -182,6 +182,15 @@ Planned future ideas:
 ## Dev Logs
 
 <details open>
+<summary><strong>v0.1.4-dev — Tunnel Reliability & Testing Polish</strong></summary>
+
+- Added a manual refresh action for the public playit.gg tunnel address.
+- Added clearer waiting feedback when playit.gg is running but no public address is available yet.
+- Removed the unused Temurin Java helper to keep Rust checks quieter.
+
+</details>
+
+<details open>
 <summary><strong>v0.1.3 — Windows Polish, Updates & Tunnel Fixes</strong></summary>
 
 - Added friendlier emojis to the GitHub homepage.

@@ -30,7 +30,12 @@ export default function Tunnel() {
   async function action(cmd: string, label?: string) {
     setErr("");
     if (label) setBusy(label);
-    try { await invoke(cmd); }
+    try {
+      const result = await invoke<PlayitState | null>(cmd);
+      if (result && typeof result === "object" && "running" in result) {
+        setPlayit(result);
+      }
+    }
     catch (e) { setErr(String(e)); }
     finally { setBusy(""); }
   }
@@ -73,12 +78,21 @@ export default function Tunnel() {
                 {busy ? "…" : `▶ ${t("common.start")}`}
               </button>
             ) : (
-              <button
-                className="btn btn-sm"
-                onClick={() => action("stop_playit")}
-              >
-                ■ {t("common.stop")}
-              </button>
+              <>
+                <button
+                  className="btn btn-sm"
+                  disabled={!!busy}
+                  onClick={() => action("refresh_playit_address", t("tunnel.refreshingAddress"))}
+                >
+                  ↻ {t("tunnel.refreshAddress")}
+                </button>
+                <button
+                  className="btn btn-sm"
+                  onClick={() => action("stop_playit")}
+                >
+                  ■ {t("common.stop")}
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -129,6 +143,29 @@ export default function Tunnel() {
           >
             {playit.claim_url}
           </a>
+        </div>
+      )}
+
+      {playit.running && !playit.address && !playit.claim_url && (
+        <div className="card" style={{ marginBottom: 14, background: "#101827", borderColor: "rgba(59,130,246,0.35)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14 }}>
+            <div>
+              <div style={{ color: "var(--blue)", fontWeight: 700, marginBottom: 4 }}>
+                {t("tunnel.waitingAddress")}
+              </div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>
+                {t("tunnel.waitingAddressHint")}
+              </div>
+            </div>
+            <button
+              className="btn btn-sm"
+              disabled={!!busy}
+              onClick={() => action("refresh_playit_address", t("tunnel.refreshingAddress"))}
+              style={{ flexShrink: 0 }}
+            >
+              ↻ {t("tunnel.refreshAddress")}
+            </button>
+          </div>
         </div>
       )}
 

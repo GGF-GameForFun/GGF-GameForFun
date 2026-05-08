@@ -138,18 +138,3 @@ pub fn bundled_java_dir(major: u8) -> PathBuf {
         .join("java")
         .join(format!("temurin-{}", major))
 }
-
-/// Download URL for an Eclipse Temurin JRE matching this OS/arch and major Java version.
-pub fn temurin_download_url(major: u8) -> String {
-    #[cfg(target_os = "macos")]
-    let (os, arch) = ("mac", if cfg!(target_arch = "aarch64") { "aarch64" } else { "x64" });
-    #[cfg(target_os = "windows")]
-    let (os, arch) = ("windows", "x64");
-    #[cfg(target_os = "linux")]
-    let (os, arch) = ("linux", if cfg!(target_arch = "aarch64") { "aarch64" } else { "x64" });
-
-    format!(
-        "https://api.adoptium.net/v3/binary/latest/{}/ga/{}/{}/jre/hotspot/normal/eclipse",
-        major, os, arch
-    )
-}

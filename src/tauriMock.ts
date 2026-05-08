@@ -91,6 +91,7 @@ const handlers: Record<string, (...args: unknown[]) => unknown> = {
   setup_playit: () => undefined,
   start_playit: () => undefined,
   stop_playit: () => undefined,
+  refresh_playit_address: () => ({ running: true, address: "example.playit.gg:25565", claim_url: null, pid: 1234 }),
   open_server_folder: () => undefined,
   install_server: () => ({ ...MOCK_CONFIG, setup_complete: true }),
 };

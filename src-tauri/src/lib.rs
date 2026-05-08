@@ -1484,6 +1484,28 @@ async fn get_playit_status(state: State<'_, AppState>) -> Result<PlayitState, St
     Ok(state.playit.lock().await.clone())
 }
 
+#[tauri::command]
+async fn refresh_playit_address(app: AppHandle, state: State<'_, AppState>) -> Result<PlayitState, String> {
+    {
+        let pl = state.playit.lock().await;
+        if !pl.running {
+            return Ok(pl.clone());
+        }
+    }
+
+    if let Some(addr) = playit::query_tunnel_address().await {
+        let mut pl = state.playit.lock().await;
+        if pl.address.as_deref() != Some(&addr) {
+            pl.address = Some(addr);
+            pl.claim_url = None;
+            app.emit("playit-update", pl.clone()).ok();
+        }
+        return Ok(pl.clone());
+    }
+
+    Ok(state.playit.lock().await.clone())
+}
+
 // ── Utility ───────────────────────────────────────────────────────────────────
 
 #[tauri::command]
@@ -1867,7 +1889,7 @@ pub fn run() {
             get_recent_players, get_banned_players, unban_player, get_console_buffer, clear_console_buffer,
             list_mods, add_mod, remove_mod,
             get_server_properties, save_server_properties,
-            setup_playit, start_playit, stop_playit, get_playit_status,
+            setup_playit, start_playit, stop_playit, get_playit_status, refresh_playit_address,
             open_server_folder, default_server_path, default_downloads_dir,
             create_backup, restore_backup, export_debug,
             default_backup_filename, default_debug_filename,
