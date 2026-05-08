@@ -182,7 +182,7 @@ GameForFun đang ở giai đoạn beta. Trọng tâm hiện tại:
 ## Nhật Ký Phát Triển
 
 <details open>
-<summary><strong>v0.1.3-dev — Polish Windows & Sửa Địa Chỉ Tunnel</strong></summary>
+<summary><strong>v0.1.3 — Polish Windows, Cập Nhật & Sửa Tunnel</strong></summary>
 
 - Thêm emoji thân thiện hơn cho trang GitHub.
 - Ẩn cửa sổ console phụ trên Windows khi chạy Java/server/playit.gg ở background.

@@ -182,7 +182,7 @@ Planned future ideas:
 ## Dev Logs
 
 <details open>
-<summary><strong>v0.1.3-dev — Windows Polish & Tunnel Address Fixes</strong></summary>
+<summary><strong>v0.1.3 — Windows Polish, Updates & Tunnel Fixes</strong></summary>
 
 - Added friendlier emojis to the GitHub homepage.
 - Hid Windows child-process console windows for Java/server/playit.gg background launches.
