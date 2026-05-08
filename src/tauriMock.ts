@@ -17,11 +17,16 @@ const MOCK_CONFIG: ServerConfig = {
   backup_include_logs: false,
   optimized_jvm_flags: true,
   performance_preset: "balanced",
+  remote_control_enabled: false,
+  remote_control_port: 47992,
+  remote_control_token: "",
+  remote_control_public_url: "",
+  cloudflare_remote_enabled: false,
 };
 
 const handlers: Record<string, (...args: unknown[]) => unknown> = {
   get_config: () => ({ ...MOCK_CONFIG }),
-  save_config: () => undefined,
+  save_config: (args?: unknown) => (args as { cfg?: ServerConfig } | undefined)?.cfg ?? { ...MOCK_CONFIG },
   check_java: () => "/usr/bin/java",
   fetch_mc_versions: () => [
     { id: "1.21.1", release_time: "2024-08-08T12:00:00Z" },
@@ -58,6 +63,45 @@ const handlers: Record<string, (...args: unknown[]) => unknown> = {
     release_notes: "",
   }),
   open_update_url: () => undefined,
+  generate_remote_token: () => "demo-token-1234567890",
+  get_remote_control_status: () => ({
+    enabled: MOCK_CONFIG.remote_control_enabled,
+    running: false,
+    host: "127.0.0.1",
+    port: MOCK_CONFIG.remote_control_port,
+    token: MOCK_CONFIG.remote_control_token,
+    lan_url: "",
+    public_url: "",
+    url: "",
+  }),
+  restart_remote_control: () => ({
+    enabled: true,
+    running: true,
+    host: "127.0.0.1",
+    port: MOCK_CONFIG.remote_control_port,
+    token: MOCK_CONFIG.remote_control_token || "demo-token-1234567890",
+    lan_url: "http://127.0.0.1:47992/?token=demo-token-1234567890",
+    public_url: "",
+    url: "http://127.0.0.1:47992/?token=demo-token-1234567890",
+  }),
+  get_cloudflare_remote_status: () => ({
+    running: false,
+    url: null,
+    pid: null,
+    message: "",
+  }),
+  start_cloudflare_remote: () => ({
+    running: true,
+    url: "https://demo.trycloudflare.com",
+    pid: 1234,
+    message: "Cloudflare tunnel ready.",
+  }),
+  stop_cloudflare_remote: () => ({
+    running: false,
+    url: null,
+    pid: null,
+    message: "Cloudflare tunnel stopped.",
+  }),
   start_server: () => undefined,
   stop_server: () => undefined,
   restart_server: () => undefined,
@@ -74,7 +118,48 @@ const handlers: Record<string, (...args: unknown[]) => unknown> = {
     },
   ],
   unban_player: () => [],
-  list_mods: () => ["EssentialsX-2.20.1.jar", "WorldEdit-7.3.0.jar"],
+  // ── Mocks added for browser-mode design preview ──────────────────────
+  get_online_players: () => ["Fishgod212", "Aingker"],
+  get_console_buffer: () => [
+    "[12:00:14] [Server thread/INFO]: Starting minecraft server version 1.20.1",
+    "[12:00:18] [Server thread/INFO]: Loading properties",
+    "[12:00:21] [Server thread/INFO]: Default game type: SURVIVAL",
+    "[12:00:32] [Server thread/INFO]: Preparing level \"world\"",
+    "[12:00:45] [Server thread/INFO]: Done (12.451s)! For help, type \"help\"",
+    "[12:01:03] [Server thread/INFO]: Fishgod212 joined the game",
+    "[12:01:18] [Server thread/INFO]: <Fishgod212> hello world",
+    "[12:02:44] [Server thread/INFO]: Aingker joined the game",
+    "[12:03:01] [Server thread/INFO]: <Aingker> ready to host?",
+    "[mchost] Auto-backup created: 312 files, 84.2 MB",
+  ],
+  clear_console_buffer: () => undefined,
+  get_pregen_state: () => ({ running: false, total: 0, completed: 0, cancel_requested: false }),
+  pregenerate_chunks: () => undefined,
+  cancel_pregenerate: () => undefined,
+  get_tunnel_diagnostics: () => ({
+    agent_running: true,
+    has_secret: true,
+    has_address: true,
+    address: "demo-tunnel.joinmc.link:25565",
+    server_running: true,
+    local_port: 25565,
+  }),
+  default_backup_filename: () => "[Backup]-08-05-2026.zip",
+  default_debug_filename: () => "debug-report-08-05-2026.zip",
+  default_downloads_dir: () => "/Users/demo/Downloads",
+  create_backup: () => ({ files: 312, bytes: 84_200_000, path: "/Users/demo/Downloads/[Backup]-08-05-2026.zip" }),
+  restore_backup: () => 312,
+  export_debug: () => 8,
+  force_quit: () => undefined,
+  list_mods: () => [
+    "create-1.20.1-0.5.1.f.jar",
+    "jei-1.20.1-15.3.0.8.jar",
+    "sodium-fabric-0.5.8.jar",
+    "iris-fabric-1.6.17.jar",
+    "supplementaries-1.20-3.0.16.jar",
+    "EssentialsX-2.20.1.jar",
+    "WorldEdit-7.3.0.jar",
+  ],
   add_mod: () => undefined,
   remove_mod: () => undefined,
   get_server_properties: () => ({
@@ -98,7 +183,7 @@ const handlers: Record<string, (...args: unknown[]) => unknown> = {
 
 export function mockInvoke(cmd: string, _args?: unknown): Promise<unknown> {
   const handler = handlers[cmd];
-  if (handler) return Promise.resolve(handler());
+  if (handler) return Promise.resolve(handler(_args));
   console.warn(`[mock] unhandled invoke: ${cmd}`);
   return Promise.resolve(null);
 }
