@@ -93,7 +93,7 @@ export default function App() {
       )}
       <CreditPopup />
       {update && !updateDismissed && (
-        <UpdateBanner info={update} onDismiss={dismissUpdate} />
+        <UpdatePrompt info={update} onDismiss={dismissUpdate} />
       )}
       {closeConfirm && (
         <CloseConfirmModal
@@ -106,46 +106,40 @@ export default function App() {
   );
 }
 
-function UpdateBanner({ info, onDismiss }: { info: UpdateInfo; onDismiss: () => void }) {
+function UpdatePrompt({ info, onDismiss }: { info: UpdateInfo; onDismiss: () => void }) {
   const { t } = useT();
+  function confirmUpdate() {
+    invoke("open_update_url", { url: info.release_url })
+      .catch(() => window.open(info.release_url, "_blank", "noreferrer"));
+    onDismiss();
+  }
+
   return (
-    <div
-      style={{
-        position: "fixed",
-        bottom: 16,
-        right: 16,
-        zIndex: 9999,
-        maxWidth: 360,
-        padding: "12px 14px",
-        background: "var(--surface)",
-        border: "1px solid rgba(139,92,246,0.55)",
-        borderRadius: "var(--radius)",
-        boxShadow: "var(--shadow-lg)",
-        animation: "fadeInUp 0.3s var(--easing)",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-        <span style={{ fontSize: 18 }}>🎉</span>
-        <span style={{ fontWeight: 600, fontSize: 13 }}>
+    <div className="modal-backdrop" onClick={onDismiss}>
+      <div className="modal" style={{ padding: 24, maxWidth: 460, width: "100%" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ fontSize: 30, marginBottom: 8 }}>🚀</div>
+        <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>
           {t("update.available", { v: info.latest_version })}
-        </span>
-      </div>
-      <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 10, lineHeight: 1.4 }}>
-        {t("update.currentVersion", { v: info.current_version })}
-      </div>
-      <div style={{ display: "flex", gap: 8 }}>
-        <a
-          href={info.release_url}
-          target="_blank"
-          rel="noreferrer"
-          className="btn btn-primary btn-sm"
-          style={{ textDecoration: "none", flex: 1, justifyContent: "center" }}
-        >
-          {t("update.viewRelease")}
-        </a>
-        <button className="btn btn-sm" onClick={onDismiss}>
-          {t("update.dismiss")}
-        </button>
+        </div>
+        <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 10, lineHeight: 1.6 }}>
+          {t("update.currentVersion", { v: info.current_version })}
+        </div>
+        {info.release_name && (
+          <div style={{ fontSize: 12, color: "var(--text)", marginBottom: 16, lineHeight: 1.5 }}>
+            {info.release_name}
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn btn-primary" onClick={confirmUpdate} style={{ flex: 1, justifyContent: "center" }}>
+            ⬇ {t("update.confirm")}
+          </button>
+          <button className="btn" onClick={onDismiss} style={{ justifyContent: "center" }}>
+            {t("update.dismiss")}
+          </button>
+        </div>
+        <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 12, lineHeight: 1.5 }}>
+          {t("update.manualNote")}
+        </div>
       </div>
     </div>
   );

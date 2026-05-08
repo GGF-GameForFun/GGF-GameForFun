@@ -23,6 +23,61 @@ use playit::PlayitState;
 use server::{ServerManager, ServerStatus};
 use stats::ServerStats;
 
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+#[cfg(target_os = "windows")]
+fn hide_child_window(cmd: &mut tokio::process::Command) {
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(CREATE_NO_WINDOW);
+}
+
+#[cfg(not(target_os = "windows"))]
+fn hide_child_window(_cmd: &mut tokio::process::Command) {}
+
+#[cfg(target_os = "windows")]
+fn hide_std_child_window(cmd: &mut std::process::Command) {
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(CREATE_NO_WINDOW);
+}
+
+#[cfg(not(target_os = "windows"))]
+#[allow(dead_code)]
+fn hide_std_child_window(_cmd: &mut std::process::Command) {}
+
+fn is_private_or_local_host(host: &str) -> bool {
+    let h = host
+        .trim_matches(|c| c == '[' || c == ']')
+        .trim_end_matches('.')
+        .to_ascii_lowercase();
+
+    if matches!(h.as_str(), "localhost" | "::1") {
+        return true;
+    }
+
+    let octets = h
+        .split('.')
+        .map(str::parse::<u8>)
+        .collect::<Result<Vec<_>, _>>();
+
+    match octets.as_deref() {
+        Ok([10, ..]) => true,
+        Ok([127, ..]) => true,
+        Ok([169, 254, ..]) => true,
+        Ok([172, second, ..]) if (16..=31).contains(second) => true,
+        Ok([192, 168, ..]) => true,
+        _ => false,
+    }
+}
+
+fn is_public_tunnel_address(addr: &str) -> bool {
+    let Some(idx) = addr.rfind(':') else {
+        return addr.contains("playit.gg") || addr.contains("playit.cloud");
+    };
+    let host = &addr[..idx];
+    !is_private_or_local_host(host)
+}
+
 // ── App State ─────────────────────────────────────────────────────────────────
 
 pub struct AppState {
@@ -327,7 +382,10 @@ async fn check_java() -> Result<String, String> {
 
     for path in &candidates {
         if path.exists() {
-            if let Ok(out) = tokio::process::Command::new(path).arg("-version").output().await {
+            let mut cmd = tokio::process::Command::new(path);
+            cmd.arg("-version");
+            hide_child_window(&mut cmd);
+            if let Ok(out) = cmd.output().await {
                 if out.status.success() || !out.stderr.is_empty() {
                     return Ok(path.to_string_lossy().to_string());
                 }
@@ -335,7 +393,10 @@ async fn check_java() -> Result<String, String> {
         }
     }
 
-    if let Ok(out) = tokio::process::Command::new("java").arg("-version").output().await {
+    let mut cmd = tokio::process::Command::new("java");
+    cmd.arg("-version");
+    hide_child_window(&mut cmd);
+    if let Ok(out) = cmd.output().await {
         if out.status.success() || !out.stderr.is_empty() {
             return Ok("java".to_string());
         }
@@ -581,10 +642,11 @@ async fn install_forge(app: &AppHandle, cfg: &ServerConfig, server_dir: &Path) -
     emit_progress(app, "Downloading Forge installer…", 0.2);
     download_file(app, &url, &installer, "Forge installer").await?;
     emit_progress(app, "Running Forge installer (may take a minute)…", 0.6);
-    let out = tokio::process::Command::new(&cfg.java_path)
-        .args(["-jar", "forge-installer.jar", "--installServer"])
-        .current_dir(server_dir)
-        .output().await
+    let mut cmd = tokio::process::Command::new(&cfg.java_path);
+    cmd.args(["-jar", "forge-installer.jar", "--installServer"])
+        .current_dir(server_dir);
+    hide_child_window(&mut cmd);
+    let out = cmd.output().await
         .map_err(|e| format!("Failed to run Forge installer: {}", e))?;
     if !out.status.success() {
         return Err(format!("Forge installer failed: {}", String::from_utf8_lossy(&out.stderr)));
@@ -614,10 +676,11 @@ async fn install_neoforge(app: &AppHandle, cfg: &ServerConfig, server_dir: &Path
     emit_progress(app, "Downloading NeoForge installer…", 0.2);
     download_file(app, &url, &installer, "NeoForge installer").await?;
     emit_progress(app, "Running NeoForge installer…", 0.6);
-    let out = tokio::process::Command::new(&cfg.java_path)
-        .args(["-jar", "neoforge-installer.jar", "--installServer"])
-        .current_dir(server_dir)
-        .output().await
+    let mut cmd = tokio::process::Command::new(&cfg.java_path);
+    cmd.args(["-jar", "neoforge-installer.jar", "--installServer"])
+        .current_dir(server_dir);
+    hide_child_window(&mut cmd);
+    let out = cmd.output().await
         .map_err(|e| format!("Failed to run NeoForge installer: {}", e))?;
     if !out.status.success() {
         return Err(format!("NeoForge installer failed: {}", String::from_utf8_lossy(&out.stderr)));
@@ -715,6 +778,7 @@ async fn do_start_server(app: AppHandle) -> Result<(), String> {
 
     cmd.current_dir(&server_dir)
         .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
+    hide_child_window(&mut cmd);
 
     let mut child = cmd.spawn().map_err(|e| format!("Failed to start server: {}", e))?;
     let stdin = child.stdin.take().ok_or("No stdin")?;
@@ -1277,10 +1341,11 @@ async fn start_playit(app: AppHandle, state: State<'_, AppState>) -> Result<(), 
         if pl.running { return Ok(()); }
     }
 
-    let mut child = tokio::process::Command::new(&bin_path)
-        .arg("--stdout")  // disable TUI; emit clean log lines instead of escape codes
-        .stdout(Stdio::piped()).stderr(Stdio::piped())
-        .spawn().map_err(|e| format!("Failed to start playit: {}", e))?;
+    let mut cmd = tokio::process::Command::new(&bin_path);
+    cmd.arg("--stdout")  // disable TUI; emit clean log lines instead of escape codes
+        .stdout(Stdio::piped()).stderr(Stdio::piped());
+    hide_child_window(&mut cmd);
+    let mut child = cmd.spawn().map_err(|e| format!("Failed to start playit: {}", e))?;
     let pid = child.id();
     let stdout = child.stdout.take().ok_or("No stdout")?;
     let stderr_pipe = child.stderr.take().ok_or("No stderr")?;
@@ -1329,7 +1394,7 @@ async fn start_playit(app: AppHandle, state: State<'_, AppState>) -> Result<(), 
             {
                 let pl = s.playit.lock().await;
                 if !pl.running { return; }
-                if pl.address.is_some() { return; }
+                if pl.address.as_deref().is_some_and(is_public_tunnel_address) { return; }
             }
             if let Some(addr) = playit::query_tunnel_address().await {
                 let mut pl = s.playit.lock().await;
@@ -1372,7 +1437,7 @@ async fn parse_playit_line(app: &AppHandle, line: &str) {
         let host = &w[..idx];
         let port = &w[idx + 1..];
         let has_host = host.contains('.') || host.eq_ignore_ascii_case("localhost");
-        if has_host && port.parse::<u16>().is_ok() {
+        if has_host && port.parse::<u16>().is_ok() && !is_private_or_local_host(host) {
             if pl.address.as_deref() != Some(w) {
                 pl.address = Some(w.to_string());
                 pl.claim_url = None; // hide the claim banner once we have an address
@@ -1404,9 +1469,10 @@ async fn stop_playit(state: State<'_, AppState>) -> Result<(), String> {
         unsafe { libc::kill(pid as i32, libc::SIGTERM); }
         #[cfg(windows)]
         {
-            tokio::process::Command::new("taskkill")
-                .args(["/PID", &pid.to_string(), "/F"])
-                .output().await.ok();
+            let mut cmd = tokio::process::Command::new("taskkill");
+            cmd.args(["/PID", &pid.to_string(), "/F"]);
+            hide_child_window(&mut cmd);
+            cmd.output().await.ok();
         }
     }
     pl.running = false; pl.pid = None;
@@ -1428,7 +1494,12 @@ fn open_server_folder() -> Result<(), String> {
     #[cfg(target_os = "macos")]
     std::process::Command::new("open").arg(&path).spawn().map_err(|e| e.to_string())?;
     #[cfg(target_os = "windows")]
-    std::process::Command::new("explorer").arg(&path).spawn().map_err(|e| e.to_string())?;
+    {
+        let mut cmd = std::process::Command::new("explorer");
+        cmd.arg(&path);
+        hide_std_child_window(&mut cmd);
+        cmd.spawn().map_err(|e| e.to_string())?;
+    }
     #[cfg(target_os = "linux")]
     std::process::Command::new("xdg-open").arg(&path).spawn().map_err(|e| e.to_string())?;
     Ok(())
@@ -1670,6 +1741,29 @@ fn default_downloads_dir() -> String {
         .to_string()
 }
 
+#[tauri::command]
+fn open_update_url(url: String) -> Result<(), String> {
+    if !url.starts_with("https://github.com/GGF-GameForFun/GGF-GameForFun/releases") {
+        return Err("Unsupported update URL".to_string());
+    }
+
+    #[cfg(target_os = "macos")]
+    std::process::Command::new("open").arg(&url).spawn().map_err(|e| e.to_string())?;
+
+    #[cfg(target_os = "windows")]
+    {
+        let mut cmd = std::process::Command::new("rundll32");
+        cmd.args(["url.dll,FileProtocolHandler", &url]);
+        hide_std_child_window(&mut cmd);
+        cmd.spawn().map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "linux")]
+    std::process::Command::new("xdg-open").arg(&url).spawn().map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 // ── Update checker ───────────────────────────────────────────────────────────
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -1778,7 +1872,7 @@ pub fn run() {
             create_backup, restore_backup, export_debug,
             default_backup_filename, default_debug_filename,
             pregenerate_chunks, cancel_pregenerate, get_pregen_state,
-            check_for_update, force_quit,
+            check_for_update, open_update_url, force_quit,
         ])
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {

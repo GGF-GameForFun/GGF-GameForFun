@@ -7,11 +7,11 @@
 <h3 align="center">Minecraft hosting made simple for friends, small communities, and chaos testing.</h3>
 
 <p align="center">
-  <a href="./README_VI.md">Tiếng Việt</a>
+  <a href="./README_VI.md">🇻🇳 Tiếng Việt</a>
   ·
-  <a href="../../releases">Download</a>
+  <a href="../../releases">⬇️ Download</a>
   ·
-  <a href="https://discord.gg/bF62psq97S">Discord</a>
+  <a href="https://discord.gg/bF62psq97S">💬 Discord</a>
 </p>
 
 GameForFun is a desktop app for hosting Minecraft Java servers without touching your router. Pick a server type, choose a Minecraft version, let the app install it, then share a public playit.gg address with friends.
@@ -22,22 +22,22 @@ Built for **Vanilla**, **Paper**, **Forge**, **Fabric**, and **NeoForge** server
 
 ---
 
-## What It Does
+## ✨ What It Does
 
 | Area | What you get |
 |---|---|
-| **Server setup** | Install Vanilla, Paper, Forge, Fabric, or NeoForge from a guided wizard |
-| **Tunneling** | Built-in playit.gg tunnel so friends can join without port forwarding |
-| **Console** | Live server logs, command input, and retained console history |
-| **Players** | View online players, OP, kick, ban, unban, and teleport |
-| **Mods / Plugins** | Add or remove `.jar` files with upload or drag-and-drop |
-| **Backups** | Create ZIP backups, restore backups, and schedule auto-backups |
-| **Performance** | JVM optimization presets, TPS monitoring, and chunk pre-generation |
-| **Languages** | English and Vietnamese UI |
+| **🧩 Server setup** | Install Vanilla, Paper, Forge, Fabric, or NeoForge from a guided wizard |
+| **🌐 Tunneling** | Built-in playit.gg tunnel so friends can join without port forwarding |
+| **🖥️ Console** | Live server logs, command input, and retained console history |
+| **👥 Players** | View online players, OP, kick, ban, unban, and teleport |
+| **📦 Mods / Plugins** | Add or remove `.jar` files with upload or drag-and-drop |
+| **💾 Backups** | Create ZIP backups, restore backups, and schedule auto-backups |
+| **⚡ Performance** | JVM optimization presets, TPS monitoring, and chunk pre-generation |
+| **🌍 Languages** | English and Vietnamese UI |
 
 ---
 
-## Download
+## ⬇️ Download
 
 Go to the [Releases page](../../releases) and download the latest version.
 
@@ -53,7 +53,7 @@ The app is still unsigned during beta.
 
 ---
 
-## First Run
+## 🚀 First Run
 
 1. Open **GameForFun**.
 2. Pick a server type: Vanilla, Paper, Forge, Fabric, or NeoForge.
@@ -69,7 +69,7 @@ That is the basic loop: **install → start → tunnel → share**.
 
 ---
 
-## playit.gg Quick Guide
+## 🌐 playit.gg Quick Guide
 
 If friends cannot join, check these first:
 
@@ -83,7 +83,7 @@ If the tunnel address does not appear immediately after claiming, keep the Tunne
 
 ---
 
-## Performance Tips
+## ⚡ Performance Tips
 
 Creative-mode flying and heavy modpacks can load chunks extremely fast. If CPU usage spikes:
 
@@ -97,16 +97,16 @@ GameForFun starts Minecraft as a normal Java process. The app helps tune launch 
 
 ---
 
-## Main Features
+## 🧰 Main Features
 
-### Server Control
+### 🎮 Server Control
 
 - Start, stop, restart, and auto-restart after crashes
 - Crash-loop protection so broken servers do not restart forever
 - Open server folder directly from the app
 - Change Minecraft version or loader from Settings
 
-### Player Admin
+### 👥 Player Admin
 
 - Online player list
 - Recently joined list
@@ -118,7 +118,7 @@ GameForFun starts Minecraft as a normal Java process. The app helps tune launch 
 - Unban
 - Teleport one player to another
 
-### Tools
+### 🛠️ Tools
 
 - Manual ZIP backup
 - Restore from backup ZIP
@@ -128,7 +128,7 @@ GameForFun starts Minecraft as a normal Java process. The app helps tune launch 
 
 ---
 
-## Build From Source
+## 🧑‍💻 Build From Source
 
 Requirements:
 
@@ -180,6 +180,17 @@ Planned future ideas:
 ---
 
 ## Dev Logs
+
+<details open>
+<summary><strong>v0.1.3-dev — Windows Polish & Tunnel Address Fixes</strong></summary>
+
+- Added friendlier emojis to the GitHub homepage.
+- Hid Windows child-process console windows for Java/server/playit.gg background launches.
+- Prevented private/local addresses from replacing the public playit.gg tunnel address.
+- Added a launch-time GitHub Release update check with a confirmation popup.
+- Kept remote console and file transfer on the roadmap for a future secure implementation.
+
+</details>
 
 <details>
 <summary><strong>v0.1.2 — Branding, Performance & Admin Tools</strong></summary>

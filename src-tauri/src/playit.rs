@@ -1,6 +1,27 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+#[cfg(target_os = "windows")]
+fn hide_std_child_window(cmd: &mut std::process::Command) {
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(CREATE_NO_WINDOW);
+}
+
+#[cfg(not(target_os = "windows"))]
+fn hide_std_child_window(_cmd: &mut std::process::Command) {}
+
+#[cfg(target_os = "windows")]
+fn hide_tokio_child_window(cmd: &mut tokio::process::Command) {
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(CREATE_NO_WINDOW);
+}
+
+#[cfg(not(target_os = "windows"))]
+fn hide_tokio_child_window(_cmd: &mut tokio::process::Command) {}
+
 /// Where playit-cli stores the agent secret on this OS
 pub fn secret_file_path() -> PathBuf {
     #[cfg(target_os = "macos")]
@@ -131,7 +152,10 @@ pub fn find_existing_playit() -> Option<PathBuf> {
 
     // Try `which <name>` for each
     for name in &names {
-        if let Ok(out) = std::process::Command::new("which").arg(name).output() {
+        let mut cmd = std::process::Command::new("which");
+        cmd.arg(name);
+        hide_std_child_window(&mut cmd);
+        if let Ok(out) = cmd.output() {
             if out.status.success() {
                 let path = String::from_utf8_lossy(&out.stdout).trim().to_string();
                 if !path.is_empty() { v.push(PathBuf::from(path)); }
@@ -184,10 +208,10 @@ pub fn playit_download_url() -> Option<&'static str> {
 /// Used as fallback on macOS where there's no prebuilt binary.
 pub async fn cargo_install_playit() -> Result<PathBuf, String> {
     // Verify cargo is available
-    let cargo_check = tokio::process::Command::new("which")
-        .arg("cargo")
-        .output()
-        .await
+    let mut cargo_check_cmd = tokio::process::Command::new("which");
+    cargo_check_cmd.arg("cargo");
+    hide_tokio_child_window(&mut cargo_check_cmd);
+    let cargo_check = cargo_check_cmd.output().await
         .map_err(|e| e.to_string())?;
     if !cargo_check.status.success() {
         return Err(
@@ -196,15 +220,15 @@ pub async fn cargo_install_playit() -> Result<PathBuf, String> {
         );
     }
 
-    let out = tokio::process::Command::new("cargo")
-        .args([
+    let mut cargo_cmd = tokio::process::Command::new("cargo");
+    cargo_cmd.args([
             "install",
             "--git", "https://github.com/playit-cloud/playit-agent.git",
             "--locked",
             "playit-cli",
-        ])
-        .output()
-        .await
+        ]);
+    hide_tokio_child_window(&mut cargo_cmd);
+    let out = cargo_cmd.output().await
         .map_err(|e| format!("cargo install failed to launch: {}", e))?;
 
     if !out.status.success() {

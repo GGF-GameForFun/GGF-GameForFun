@@ -1,5 +1,17 @@
 use std::path::PathBuf;
 
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+#[cfg(target_os = "windows")]
+fn hide_std_child_window(cmd: &mut std::process::Command) {
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(CREATE_NO_WINDOW);
+}
+
+#[cfg(not(target_os = "windows"))]
+fn hide_std_child_window(_cmd: &mut std::process::Command) {}
+
 /// Map a Minecraft version like "1.20.1" to the Java major version that should run it.
 /// Conservative — picks the highest Java the version is well-tested with.
 pub fn required_java_for_mc(mc_version: &str) -> u8 {
@@ -83,7 +95,10 @@ pub fn find_java_with_version(major: u8) -> Option<PathBuf> {
 
     // Verify version of each candidate
     for path in candidates {
-        if let Ok(out) = std::process::Command::new(&path).arg("-version").output() {
+        let mut cmd = std::process::Command::new(&path);
+        cmd.arg("-version");
+        hide_std_child_window(&mut cmd);
+        if let Ok(out) = cmd.output() {
             let stderr = String::from_utf8_lossy(&out.stderr);
             // Java prints version like: openjdk version "17.0.10" 2024-01-16
             //                       or: java version "17.0.5" 2022-10-18

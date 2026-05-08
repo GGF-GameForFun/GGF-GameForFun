@@ -7,11 +7,11 @@
 <h3 align="center">Host server Minecraft dễ hơn cho bạn bè, cộng đồng nhỏ, và những buổi test hơi hỗn loạn.</h3>
 
 <p align="center">
-  <a href="./README.md">English</a>
+  <a href="./README.md">🇺🇸 English</a>
   ·
-  <a href="../../releases">Tải bản mới nhất</a>
+  <a href="../../releases">⬇️ Tải bản mới nhất</a>
   ·
-  <a href="https://discord.gg/bF62psq97S">Discord</a>
+  <a href="https://discord.gg/bF62psq97S">💬 Discord</a>
 </p>
 
 GameForFun là app desktop giúp bạn host Minecraft Java server mà không cần mở port router. Chọn loại server, chọn phiên bản Minecraft, để app tự cài đặt, rồi chia sẻ địa chỉ playit.gg public cho bạn bè.
@@ -22,22 +22,22 @@ Hỗ trợ **Vanilla**, **Paper**, **Forge**, **Fabric**, và **NeoForge**.
 
 ---
 
-## App Làm Được Gì?
+## ✨ App Làm Được Gì?
 
 | Mục | Tính năng |
 |---|---|
-| **Cài server** | Cài Vanilla, Paper, Forge, Fabric, hoặc NeoForge bằng wizard dễ dùng |
-| **Tunnel** | Tích hợp playit.gg để bạn bè join mà không cần port forwarding |
-| **Console** | Xem log live, nhập command, giữ lịch sử console |
-| **Người chơi** | Xem online, OP, kick, ban, gỡ ban, dịch chuyển |
-| **Mods / Plugins** | Thêm/xóa file `.jar` bằng upload hoặc kéo thả |
-| **Backup** | Tạo ZIP backup, phục hồi backup, và lên lịch auto-backup |
-| **Hiệu năng** | JVM preset, TPS monitor, và tạo trước chunk |
-| **Ngôn ngữ** | Giao diện Tiếng Anh và Tiếng Việt |
+| **🧩 Cài server** | Cài Vanilla, Paper, Forge, Fabric, hoặc NeoForge bằng wizard dễ dùng |
+| **🌐 Tunnel** | Tích hợp playit.gg để bạn bè join mà không cần port forwarding |
+| **🖥️ Console** | Xem log live, nhập command, giữ lịch sử console |
+| **👥 Người chơi** | Xem online, OP, kick, ban, gỡ ban, dịch chuyển |
+| **📦 Mods / Plugins** | Thêm/xóa file `.jar` bằng upload hoặc kéo thả |
+| **💾 Backup** | Tạo ZIP backup, phục hồi backup, và lên lịch auto-backup |
+| **⚡ Hiệu năng** | JVM preset, TPS monitor, và tạo trước chunk |
+| **🌍 Ngôn ngữ** | Giao diện Tiếng Anh và Tiếng Việt |
 
 ---
 
-## Tải App
+## ⬇️ Tải App
 
 Vào trang [Releases](../../releases) và tải bản mới nhất.
 
@@ -53,7 +53,7 @@ App hiện vẫn là bản beta chưa ký chứng chỉ.
 
 ---
 
-## Lần Chạy Đầu Tiên
+## 🚀 Lần Chạy Đầu Tiên
 
 1. Mở **GameForFun**.
 2. Chọn loại server: Vanilla, Paper, Forge, Fabric, hoặc NeoForge.
@@ -69,7 +69,7 @@ Luồng cơ bản là: **cài đặt → chạy server → bật tunnel → gử
 
 ---
 
-## Hướng Dẫn Nhanh playit.gg
+## 🌐 Hướng Dẫn Nhanh playit.gg
 
 Nếu bạn bè không vào được server, kiểm tra các mục này trước:
 
@@ -83,7 +83,7 @@ Nếu vừa claim xong mà địa chỉ chưa hiện ngay, giữ tab Tunnel mở
 
 ---
 
-## Mẹo Giảm Lag / CPU
+## ⚡ Mẹo Giảm Lag / CPU
 
 Bay creative và modpack nặng có thể tải chunk cực nhanh. Nếu CPU tăng cao:
 
@@ -97,16 +97,16 @@ GameForFun chạy Minecraft như một Java process bình thường. App hỗ tr
 
 ---
 
-## Tính Năng Chính
+## 🧰 Tính Năng Chính
 
-### Điều Khiển Server
+### 🎮 Điều Khiển Server
 
 - Start, stop, restart, và auto-restart khi crash
 - Chống crash-loop để server lỗi không restart vô hạn
 - Mở thư mục server trực tiếp từ app
 - Đổi phiên bản Minecraft hoặc loader trong Settings
 
-### Quản Lý Người Chơi
+### 👥 Quản Lý Người Chơi
 
 - Danh sách người chơi online
 - Danh sách người vừa tham gia
@@ -118,7 +118,7 @@ GameForFun chạy Minecraft như một Java process bình thường. App hỗ tr
 - Gỡ ban
 - Dịch chuyển người chơi
 
-### Công Cụ
+### 🛠️ Công Cụ
 
 - ZIP backup thủ công
 - Phục hồi từ file backup ZIP
@@ -128,7 +128,7 @@ GameForFun chạy Minecraft như một Java process bình thường. App hỗ tr
 
 ---
 
-## Build Từ Source
+## 🧑‍💻 Build Từ Source
 
 Yêu cầu:
 
@@ -180,6 +180,17 @@ GameForFun đang ở giai đoạn beta. Trọng tâm hiện tại:
 ---
 
 ## Nhật Ký Phát Triển
+
+<details open>
+<summary><strong>v0.1.3-dev — Polish Windows & Sửa Địa Chỉ Tunnel</strong></summary>
+
+- Thêm emoji thân thiện hơn cho trang GitHub.
+- Ẩn cửa sổ console phụ trên Windows khi chạy Java/server/playit.gg ở background.
+- Chặn địa chỉ local/private ghi đè địa chỉ public của playit.gg.
+- Thêm kiểm tra GitHub Release khi mở app, có popup xác nhận cập nhật.
+- Giữ remote console và chuyển file trong roadmap để làm bản an toàn hơn sau này.
+
+</details>
 
 <details>
 <summary><strong>v0.1.2 — Thương hiệu, Hiệu năng & Công cụ Admin</strong></summary>
