@@ -17,6 +17,15 @@ interface Props {
   onSave: (cfg: ServerConfig) => void;
 }
 
+interface UpdateInfo {
+  current_version: string;
+  latest_version: string;
+  update_available: boolean;
+  release_name: string;
+  release_url: string;
+  release_notes: string;
+}
+
 const PERFORMANCE_PRESETS: Record<string, {
   viewDistance: string;
   simulationDistance: string;
@@ -101,6 +110,8 @@ export default function ServerSettings({ config, onSave }: Props) {
           {error}
         </div>
       )}
+
+      <UpdateCheckCard />
 
       {/* App config */}
       <div className="card" style={{ marginBottom: 16 }}>
@@ -287,6 +298,91 @@ export default function ServerSettings({ config, onSave }: Props) {
 
 
       <ToolsSection />
+    </div>
+  );
+}
+
+function UpdateCheckCard() {
+  const { t } = useT();
+  const [busy, setBusy] = useState(false);
+  const [info, setInfo] = useState<UpdateInfo | null>(null);
+  const [error, setError] = useState("");
+
+  async function check() {
+    setBusy(true);
+    setError("");
+    try {
+      const result = await invoke<UpdateInfo>("check_for_update");
+      setInfo(result);
+    } catch (e) {
+      setError(t("settings.updateCheckFailed", { err: String(e) }));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function openRelease() {
+    if (!info) return;
+    try {
+      await invoke("open_update_url", { url: info.release_url });
+    } catch (e) {
+      setError(String(e));
+    }
+  }
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 240 }}>
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>⬇ {t("settings.updateSection")}</div>
+          <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>
+            {t("settings.updateDesc")}
+          </div>
+        </div>
+        <button className="btn btn-sm" disabled={busy} onClick={check}>
+          {busy ? t("settings.checkingUpdates") : t("settings.checkUpdates")}
+        </button>
+      </div>
+
+      {error && (
+        <div style={{
+          marginTop: 10,
+          color: "var(--red)",
+          background: "rgba(248,113,113,0.08)",
+          border: "1px solid rgba(248,113,113,0.4)",
+          borderRadius: "var(--radius-sm)",
+          padding: "8px 12px",
+          fontSize: 12,
+        }}>
+          {error}
+        </div>
+      )}
+
+      {info && !error && (
+        <div style={{
+          marginTop: 10,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+          padding: "9px 12px",
+          borderRadius: "var(--radius-sm)",
+          border: `1px solid ${info.update_available ? "rgba(56,189,248,0.45)" : "rgba(74,222,128,0.35)"}`,
+          background: info.update_available ? "rgba(56,189,248,0.08)" : "rgba(74,222,128,0.08)",
+          fontSize: 12,
+        }}>
+          <div style={{ color: info.update_available ? "var(--blue)" : "var(--green)" }}>
+            {info.update_available
+              ? t("update.available", { v: info.latest_version })
+              : t("settings.upToDate")}
+          </div>
+          {info.update_available && (
+            <button className="btn btn-primary btn-sm" onClick={openRelease}>
+              ⬇ {t("update.confirm")}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

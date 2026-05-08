@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke, listen } from "../../tauri";
-import { PlayitState } from "../../types";
+import { PlayitState, ServerStatus } from "../../types";
 import { useT } from "../../i18n";
 
 export default function Tunnel() {
@@ -12,15 +12,22 @@ export default function Tunnel() {
   const [busy, setBusy] = useState("");
   const [err, setErr] = useState("");
   const [copied, setCopied] = useState(false);
+  const [serverStatus, setServerStatus] = useState<ServerStatus>("stopped");
+  const [serverPort, setServerPort] = useState("25565");
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     invoke<PlayitState>("get_playit_status").then(setPlayit).catch(() => {});
+    invoke<ServerStatus>("get_server_status").then(setServerStatus).catch(() => {});
+    invoke<Record<string, string>>("get_server_properties")
+      .then((props) => setServerPort(props["server-port"] || "25565"))
+      .catch(() => {});
     const u1 = listen<PlayitState>("playit-update", (e) => setPlayit(e.payload));
     const u2 = listen<string>("playit-line", (e) => {
       setLines((l) => [...l.slice(-1500), e.payload]);
     });
-    return () => { u1.then((f) => f()); u2.then((f) => f()); };
+    const u3 = listen<ServerStatus>("server-status", (e) => setServerStatus(e.payload));
+    return () => { u1.then((f) => f()); u2.then((f) => f()); u3.then((f) => f()); };
   }, []);
 
   useEffect(() => {
@@ -146,6 +153,17 @@ export default function Tunnel() {
         </div>
       )}
 
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div style={{ fontWeight: 700, marginBottom: 10 }}>🧪 {t("tunnel.diagnostics")}</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          <DiagnosticRow ok={playit.running} label={t("tunnel.diagAgent")} />
+          <DiagnosticRow ok={!playit.claim_url} warn={!!playit.claim_url} label={playit.claim_url ? t("tunnel.diagClaimNeeded") : t("tunnel.diagClaimReady")} />
+          <DiagnosticRow ok={!!playit.address} warn={playit.running && !playit.address} label={playit.address ? t("tunnel.diagAddressFound") : t("tunnel.diagAddressMissing")} />
+          <DiagnosticRow ok={serverStatus === "running"} warn={serverStatus === "starting"} label={serverStatus === "running" ? t("tunnel.diagServerRunning") : t("tunnel.diagServerNotRunning")} />
+          <DiagnosticRow ok={serverPort === "25565"} warn={serverPort !== "25565"} label={t("tunnel.diagLocalPort", { port: serverPort })} />
+        </div>
+      </div>
+
       {playit.running && !playit.address && !playit.claim_url && (
         <div className="card" style={{ marginBottom: 14, background: "#101827", borderColor: "rgba(59,130,246,0.35)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14 }}>
@@ -216,6 +234,42 @@ export default function Tunnel() {
         )}
         <div ref={bottomRef} />
       </div>
+    </div>
+  );
+}
+
+function DiagnosticRow({ ok, warn, label }: { ok: boolean; warn?: boolean; label: string }) {
+  const color = ok ? "var(--green)" : warn ? "var(--yellow)" : "var(--text-muted)";
+  const symbol = ok ? "✓" : warn ? "!" : "•";
+  return (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      minHeight: 32,
+      padding: "7px 9px",
+      background: "var(--surface2)",
+      border: "1px solid var(--border)",
+      borderRadius: "var(--radius-sm)",
+      fontSize: 12,
+      color: "var(--text-muted)",
+    }}>
+      <span style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 18,
+        height: 18,
+        borderRadius: 999,
+        color,
+        border: `1px solid ${color}`,
+        flexShrink: 0,
+        fontSize: 11,
+        fontWeight: 800,
+      }}>
+        {symbol}
+      </span>
+      <span>{label}</span>
     </div>
   );
 }

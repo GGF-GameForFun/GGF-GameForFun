@@ -186,6 +186,9 @@ Planned future ideas:
 
 - Added a manual refresh action for the public playit.gg tunnel address.
 - Added clearer waiting feedback when playit.gg is running but no public address is available yet.
+- Added Tunnel diagnostics for agent, claim, public address, server status, and local port.
+- Added a manual Settings action to check for GameForFun updates.
+- Refined Windows installer/uninstaller wizard text and progress details.
 - Removed the unused Temurin Java helper to keep Rust checks quieter.
 
 </details>

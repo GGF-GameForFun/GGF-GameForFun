@@ -186,6 +186,9 @@ GameForFun đang ở giai đoạn beta. Trọng tâm hiện tại:
 
 - Thêm nút refresh thủ công cho địa chỉ public playit.gg.
 - Hiển thị trạng thái chờ rõ hơn khi playit.gg đang chạy nhưng chưa có địa chỉ public.
+- Thêm chẩn đoán Tunnel cho agent, claim, địa chỉ public, trạng thái server, và port local.
+- Thêm nút kiểm tra cập nhật thủ công trong Settings.
+- Chỉnh lại text wizard installer/uninstaller Windows và log tiến trình.
 - Xoá helper Temurin Java không dùng tới để Rust check gọn hơn.
 
 </details>
