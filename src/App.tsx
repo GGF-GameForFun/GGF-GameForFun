@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { invoke, listen } from "./tauri";
-import { ServerConfig, ServerStatus } from "./types";
+import { ServerConfig } from "./types";
 import { LocaleProvider, useT } from "./i18n";
 import SetupWizard from "./components/Setup/SetupWizard";
 import Layout from "./components/Layout";
@@ -15,10 +15,19 @@ interface UpdateInfo {
   release_notes: string;
 }
 
+interface ShutdownStatus {
+  server_running: boolean;
+  playit_running: boolean;
+  cloudflare_running: boolean;
+  remote_control_running: boolean;
+  any_running: boolean;
+}
+
 export default function App() {
   const [config, setConfig] = useState<ServerConfig | null>(null);
   const [loading, setLoading] = useState(true);
-  const [closeConfirm, setCloseConfirm] = useState(false);
+  const [closeConfirm, setCloseConfirm] = useState<ShutdownStatus | null>(null);
+  const [closing, setClosing] = useState(false);
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
   const [updateDismissed, setUpdateDismissed] = useState(false);
 
@@ -36,15 +45,12 @@ export default function App() {
       }, delayMs);
     });
 
-    // Window-close interception: if server running, ask first
+    // Window-close interception: if background services are running, ask first
     const u2 = listen<void>("close-requested", async () => {
       try {
-        const status = await invoke<ServerStatus>("get_server_status");
-        if (status === "stopped") {
-          await invoke("force_quit");
-        } else {
-          setCloseConfirm(true);
-        }
+        const status = await invoke<ShutdownStatus>("get_shutdown_status");
+        if (status.any_running) setCloseConfirm(status);
+        else await invoke("force_quit");
       } catch {
         await invoke("force_quit");
       }
@@ -67,10 +73,9 @@ export default function App() {
   }
 
   async function stopAndQuit() {
+    setClosing(true);
     try {
-      await invoke("stop_server").catch(() => {});
-      // Give the server a moment to write data; then quit.
-      setTimeout(() => { invoke("force_quit"); }, 1500);
+      await invoke("shutdown_and_quit");
     } catch {
       invoke("force_quit");
     }
@@ -97,9 +102,11 @@ export default function App() {
       )}
       {closeConfirm && (
         <CloseConfirmModal
-          onCancel={() => setCloseConfirm(false)}
-          onStopQuit={() => { setCloseConfirm(false); stopAndQuit(); }}
-          onForceQuit={() => { setCloseConfirm(false); invoke("force_quit"); }}
+          status={closeConfirm}
+          closing={closing}
+          onCancel={() => setCloseConfirm(null)}
+          onStopQuit={() => { stopAndQuit(); }}
+          onForceQuit={() => { setCloseConfirm(null); invoke("force_quit"); }}
         />
       )}
     </LocaleProvider>
@@ -146,15 +153,25 @@ function UpdatePrompt({ info, onDismiss }: { info: UpdateInfo; onDismiss: () => 
 }
 
 function CloseConfirmModal({
+  status,
+  closing,
   onCancel,
   onStopQuit,
   onForceQuit,
 }: {
+  status: ShutdownStatus;
+  closing: boolean;
   onCancel: () => void;
   onStopQuit: () => void;
   onForceQuit: () => void;
 }) {
   const { t } = useT();
+  const activeItems = [
+    status.server_running ? t("close.itemServer") : null,
+    status.playit_running ? t("close.itemPlayit") : null,
+    status.cloudflare_running ? t("close.itemCloudflare") : null,
+    status.remote_control_running ? t("close.itemRemote") : null,
+  ].filter(Boolean);
   return (
     <div className="modal-backdrop" onClick={onCancel}>
       <div className="modal" style={{ padding: 24, maxWidth: 420, width: "100%" }} onClick={(e) => e.stopPropagation()}>
@@ -165,14 +182,20 @@ function CloseConfirmModal({
         <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 18, lineHeight: 1.6 }}>
           {t("close.body")}
         </div>
+        <div style={{ marginBottom: 16, padding: "10px 12px", borderRadius: 8, background: "var(--surface2)", border: "1px solid var(--border)" }}>
+          <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6 }}>{t("close.runningItems")}</div>
+          <ul style={{ margin: 0, paddingLeft: 18, color: "var(--text-muted)", fontSize: 12, lineHeight: 1.7 }}>
+            {activeItems.map((item) => <li key={item}>{item}</li>)}
+          </ul>
+        </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <button className="btn btn-primary" onClick={onStopQuit} style={{ justifyContent: "center" }}>
-            ■ {t("close.stopAndQuit")}
+          <button className="btn btn-primary" disabled={closing} onClick={onStopQuit} style={{ justifyContent: "center" }}>
+            ■ {closing ? t("close.stopping") : t("close.stopAndQuit")}
           </button>
-          <button className="btn btn-danger" onClick={onForceQuit} style={{ justifyContent: "center" }}>
+          <button className="btn btn-danger" disabled={closing} onClick={onForceQuit} style={{ justifyContent: "center" }}>
             ⚠ {t("close.forceQuit")}
           </button>
-          <button className="btn" onClick={onCancel} style={{ justifyContent: "center" }}>
+          <button className="btn" disabled={closing} onClick={onCancel} style={{ justifyContent: "center" }}>
             {t("common.cancel")}
           </button>
         </div>

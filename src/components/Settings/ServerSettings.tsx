@@ -7,6 +7,8 @@ import {
   McVersion,
   LoaderVersion,
   InstallProgress,
+  RemoteControlState,
+  CloudflareTunnelState,
   SERVER_TYPES,
 } from "../../types";
 import { useT, Locale } from "../../i18n";
@@ -37,6 +39,11 @@ const PERFORMANCE_PRESETS: Record<string, {
   max_performance: { viewDistance: "10", simulationDistance: "8", ramFloorMb: 8192 },
 };
 
+function clampRemotePort(port: number) {
+  if (!Number.isFinite(port)) return 47992;
+  return Math.min(65535, Math.max(1024, Math.round(port)));
+}
+
 export default function ServerSettings({ config, onSave }: Props) {
   const { t } = useT();
   const [form, setForm] = useState(config);
@@ -45,6 +52,15 @@ export default function ServerSettings({ config, onSave }: Props) {
   const [saved, setSaved] = useState(false);
   const [propsSaved, setPropsSaved] = useState(false);
   const [error, setError] = useState("");
+  const [remoteStatus, setRemoteStatus] = useState<RemoteControlState | null>(null);
+  const [remoteCopied, setRemoteCopied] = useState(false);
+  const [cloudflareStatus, setCloudflareStatus] = useState<CloudflareTunnelState | null>(null);
+  const [cloudflareBusy, setCloudflareBusy] = useState(false);
+  const [cloudflareCopied, setCloudflareCopied] = useState(false);
+
+  useEffect(() => {
+    setForm(config);
+  }, [config]);
 
   useEffect(() => {
     invoke<Record<string, string>>("get_server_properties")
@@ -52,16 +68,148 @@ export default function ServerSettings({ config, onSave }: Props) {
       .catch(() => setLoadingProps(false));
   }, []);
 
+  useEffect(() => {
+    refreshRemoteStatus();
+    refreshCloudflareStatus();
+    const unlisten = listen<CloudflareTunnelState>("cloudflare-remote-update", async (e) => {
+      setCloudflareStatus(e.payload);
+      if (e.payload.url) {
+        const updatedConfig = await invoke<ServerConfig>("get_config");
+        setForm(updatedConfig);
+        onSave(updatedConfig);
+        const status = await invoke<RemoteControlState>("get_remote_control_status");
+        setRemoteStatus(status);
+      }
+    });
+    return () => { unlisten.then((f) => f()); };
+  }, []);
+
+  useEffect(() => {
+    if (!error) return;
+    const timeout = window.setTimeout(() => setError(""), 7000);
+    return () => window.clearTimeout(timeout);
+  }, [error]);
+
   async function saveConfig() {
     setError("");
     try {
-      await invoke("save_config", { cfg: form });
-      onSave(form);
+      const normalizedForm = {
+        ...form,
+        remote_control_port: clampRemotePort(form.remote_control_port),
+      };
+      const savedConfig = await invoke<ServerConfig>("save_config", { cfg: normalizedForm });
+      setForm(savedConfig);
+      onSave(savedConfig);
+      await refreshRemoteStatus();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
       setError(String(e));
     }
+  }
+
+  async function refreshRemoteStatus() {
+    try {
+      const status = await invoke<RemoteControlState>("get_remote_control_status");
+      setRemoteStatus(status);
+    } catch {
+      setRemoteStatus(null);
+    }
+  }
+
+  async function refreshCloudflareStatus() {
+    try {
+      const status = await invoke<CloudflareTunnelState>("get_cloudflare_remote_status");
+      setCloudflareStatus(status);
+    } catch {
+      setCloudflareStatus(null);
+    }
+  }
+
+  async function restartRemoteControl() {
+    setError("");
+    try {
+      const status = await invoke<RemoteControlState>("restart_remote_control");
+      setRemoteStatus(status);
+    } catch (e) {
+      setError(String(e));
+    }
+  }
+
+  async function generateRemoteToken() {
+    setError("");
+    try {
+      const token = await invoke<string>("generate_remote_token");
+      setForm((f) => ({ ...f, remote_control_token: token }));
+    } catch (e) {
+      setError(String(e));
+    }
+  }
+
+  async function copyRemoteUrl() {
+    if (!remoteStatus?.url) return;
+    await navigator.clipboard.writeText(remoteStatus.url);
+    setRemoteCopied(true);
+    setTimeout(() => setRemoteCopied(false), 1600);
+  }
+
+  async function startCloudflareRemote() {
+    setError("");
+    setCloudflareBusy(true);
+    try {
+      const savedConfig = await invoke<ServerConfig>("save_config", {
+        cfg: {
+          ...form,
+          remote_control_enabled: true,
+          remote_control_port: clampRemotePort(form.remote_control_port),
+          cloudflare_remote_enabled: true,
+        },
+      });
+      setForm(savedConfig);
+      onSave(savedConfig);
+      const remote = await invoke<RemoteControlState>("restart_remote_control");
+      setRemoteStatus(remote);
+      const tunnel = await invoke<CloudflareTunnelState>("start_cloudflare_remote");
+      setCloudflareStatus(tunnel);
+      const updatedConfig = await invoke<ServerConfig>("get_config");
+      setForm(updatedConfig);
+      onSave(updatedConfig);
+      const status = await invoke<RemoteControlState>("get_remote_control_status");
+      setRemoteStatus(status);
+      if (!tunnel.url) {
+        setError(tunnel.message || t("settings.cloudflareNoUrl"));
+      }
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setCloudflareBusy(false);
+    }
+  }
+
+  async function stopCloudflareRemote() {
+    setError("");
+    setCloudflareBusy(true);
+    try {
+      const tunnel = await invoke<CloudflareTunnelState>("stop_cloudflare_remote");
+      setCloudflareStatus(tunnel);
+      // Persist disabled flag so it doesn't auto-start on next launch
+      const savedConfig = await invoke<ServerConfig>("save_config", {
+        cfg: { ...form, cloudflare_remote_enabled: false },
+      });
+      setForm(savedConfig);
+      onSave(savedConfig);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setCloudflareBusy(false);
+    }
+  }
+
+  async function copyCloudflareUrl() {
+    if (!cloudflareStatus?.url) return;
+    await navigator.clipboard.writeText(cloudflareStatus.url);
+    setCloudflareCopied(true);
+    setTimeout(() => setCloudflareCopied(false), 1600);
   }
 
   async function saveProps() {
@@ -95,21 +243,7 @@ export default function ServerSettings({ config, onSave }: Props) {
     <div className="page-transition" style={{ padding: 24, maxWidth: 720, margin: "0 auto" }}>
       <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20 }}>{t("settings.title")}</h2>
 
-      {error && (
-        <div
-          style={{
-            color: "var(--red)",
-            background: "#2a1515",
-            border: "1px solid var(--red)",
-            borderRadius: 6,
-            padding: "10px 14px",
-            marginBottom: 16,
-            fontSize: 13,
-          }}
-        >
-          {error}
-        </div>
-      )}
+      {error && <ErrorToast message={error} />}
 
       <UpdateCheckCard />
 
@@ -279,6 +413,133 @@ export default function ServerSettings({ config, onSave }: Props) {
           </button>
         </div>
 
+        {/* Remote Control — section header */}
+        <div style={{ marginBottom: 8, marginTop: 4 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
+            🖥 {t("settings.remoteControl")}
+          </div>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.5 }}>
+            {t("settings.remoteControlDesc")}
+          </div>
+        </div>
+
+        {/* Card 1 — LAN Remote */}
+        <RemoteCard
+          accent="cyan"
+          icon="🏠"
+          title={t("settings.lanRemoteTitle")}
+          desc={t("settings.lanRemoteDesc")}
+          enabled={form.remote_control_enabled}
+          onToggle={(v) => setForm((f) => ({ ...f, remote_control_enabled: v }))}
+          running={!!remoteStatus?.running}
+          url={remoteStatus?.lan_url || (remoteStatus?.public_url ? "" : remoteStatus?.url || "")}
+          urlLabel={t("settings.lanRemoteIpLabel")}
+          urlPlaceholder={
+            form.remote_control_enabled
+              ? t("settings.remoteSaveHint")
+              : t("settings.lanRemoteEnableHint")
+          }
+          copied={remoteCopied}
+          onCopy={async () => {
+            const u = remoteStatus?.lan_url || remoteStatus?.url;
+            if (!u) return;
+            await navigator.clipboard.writeText(u);
+            setRemoteCopied(true);
+            setTimeout(() => setRemoteCopied(false), 1600);
+          }}
+        >
+          <div style={{ display: "grid", gridTemplateColumns: "130px 1fr", gap: 12, marginTop: 12 }}>
+            <div>
+              <div className="label">{t("settings.remotePort")}</div>
+              <input
+                type="number"
+                min={1024}
+                max={65535}
+                value={form.remote_control_port}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, remote_control_port: clampRemotePort(Number(e.target.value)) }))
+                }
+                style={{ width: "100%" }}
+                disabled={!form.remote_control_enabled}
+              />
+            </div>
+            <div>
+              <div className="label">{t("settings.remoteToken")}</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  readOnly
+                  value={form.remote_control_token || t("settings.remoteNoToken")}
+                  style={{ width: "100%", fontFamily: "var(--font-mono)" }}
+                />
+                <button className="btn btn-sm" onClick={generateRemoteToken}>
+                  {t("settings.remoteGenerate")}
+                </button>
+              </div>
+            </div>
+          </div>
+          {form.remote_control_enabled && (
+            <div style={{ marginTop: 10, display: "flex", justifyContent: "flex-end" }}>
+              <button className="btn btn-sm" onClick={restartRemoteControl}>
+                ↻ {t("settings.remoteRestart")}
+              </button>
+            </div>
+          )}
+        </RemoteCard>
+
+        {/* Card 2 — Cloudflare Public */}
+        <RemoteCard
+          accent="orange"
+          icon="☁"
+          title={t("settings.cloudflareTitle")}
+          desc={t("settings.cloudflareDesc")}
+          enabled={form.cloudflare_remote_enabled}
+          onToggle={async (v) => {
+            // Toggle is the live action — start/stop the tunnel + persist.
+            if (v) {
+              if (!form.remote_control_enabled) {
+                setError(t("settings.cloudflareLanRequired"));
+                return;
+              }
+              setForm((f) => ({ ...f, cloudflare_remote_enabled: true }));
+              await startCloudflareRemote();
+            } else {
+              setForm((f) => ({ ...f, cloudflare_remote_enabled: false }));
+              await stopCloudflareRemote();
+            }
+          }}
+          disabled={!form.remote_control_enabled || cloudflareBusy}
+          running={!!cloudflareStatus?.running}
+          url={cloudflareStatus?.url || ""}
+          urlLabel={t("settings.cloudflareIpLabel")}
+          urlPlaceholder={
+            cloudflareBusy
+              ? t("settings.cloudflareStarting")
+              : !form.remote_control_enabled
+                ? t("settings.cloudflareLanRequired")
+                : cloudflareStatus?.message || t("settings.cloudflareIdle")
+          }
+          copied={cloudflareCopied}
+          onCopy={copyCloudflareUrl}
+        />
+
+        {/* Optional pre-existing public tunnel URL (manual override) */}
+        <details style={{ marginBottom: 14 }}>
+          <summary style={{ cursor: "pointer", fontSize: 11, color: "var(--text-muted)", padding: "4px 0" }}>
+            {t("settings.remotePublicUrlAdvanced")}
+          </summary>
+          <div style={{ marginTop: 8 }}>
+            <input
+              value={form.remote_control_public_url}
+              onChange={(e) => setForm((f) => ({ ...f, remote_control_public_url: e.target.value }))}
+              placeholder="https://example.trycloudflare.com"
+              style={{ width: "100%", marginBottom: 6 }}
+            />
+            <div style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.45 }}>
+              {t("settings.remotePublicUrlDesc", { port: String(form.remote_control_port) })}
+            </div>
+          </div>
+        </details>
+
         <button className="btn btn-primary btn-sm" onClick={saveConfig}>
           {saved ? `✓ ${t("common.saved")}` : t("common.save")}
         </button>
@@ -299,6 +560,217 @@ export default function ServerSettings({ config, onSave }: Props) {
 
       <ToolsSection />
     </div>
+  );
+}
+
+function ErrorToast({ message }: { message: string }) {
+  return (
+    <div className="toast-stack" role="status" aria-live="polite">
+      <div className="toast toast-error">
+        {message}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reusable card for a single remote-access service (LAN or Cloudflare).
+// Shows: title row with toggle, description, URL/IP display, copy button,
+// status pill, and any extra config (children).
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface RemoteCardProps {
+  accent: "cyan" | "orange";
+  icon: string;
+  title: string;
+  desc: string;
+  enabled: boolean;
+  disabled?: boolean;
+  onToggle: (v: boolean) => void;
+  running: boolean;
+  url: string;
+  urlLabel: string;
+  urlPlaceholder: string;
+  copied: boolean;
+  onCopy: () => void;
+  children?: React.ReactNode;
+}
+
+function RemoteCard({
+  accent,
+  icon,
+  title,
+  desc,
+  enabled,
+  disabled = false,
+  onToggle,
+  running,
+  url,
+  urlLabel,
+  urlPlaceholder,
+  copied,
+  onCopy,
+  children,
+}: RemoteCardProps) {
+  const palette = accent === "cyan"
+    ? {
+        bg: "linear-gradient(135deg, rgba(56,189,248,0.10), rgba(99,102,241,0.06))",
+        border: "rgba(56,189,248,0.30)",
+        glow: "rgba(56,189,248,0.18)",
+        urlBg: "rgba(56,189,248,0.07)",
+        urlBorder: "rgba(56,189,248,0.25)",
+      }
+    : {
+        bg: "linear-gradient(135deg, rgba(251,146,60,0.10), rgba(244,114,182,0.06))",
+        border: "rgba(251,146,60,0.30)",
+        glow: "rgba(251,146,60,0.18)",
+        urlBg: "rgba(251,146,60,0.07)",
+        urlBorder: "rgba(251,146,60,0.25)",
+      };
+
+  return (
+    <div
+      style={{
+        marginBottom: 12,
+        padding: "14px 14px 12px",
+        background: palette.bg,
+        border: `1px solid ${palette.border}`,
+        borderRadius: "var(--radius)",
+        boxShadow: enabled && running ? `0 0 0 1px ${palette.glow}` : "none",
+        transition: "box-shadow 0.2s ease",
+      }}
+    >
+      {/* Title row with toggle */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <span style={{ fontSize: 16 }}>{icon}</span>
+            <span style={{ fontSize: 14, fontWeight: 700 }}>{title}</span>
+            <StatusPill running={running} enabled={enabled} />
+          </div>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.5 }}>
+            {desc}
+          </div>
+        </div>
+        <Toggle disabled={disabled} on={enabled} onChange={onToggle} />
+      </div>
+
+      {/* URL display */}
+      <div style={{ marginTop: 12 }}>
+        <div className="label" style={{ marginBottom: 4 }}>{urlLabel}</div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "8px 10px",
+            background: url ? palette.urlBg : "rgba(0,0,0,0.18)",
+            border: `1px solid ${url ? palette.urlBorder : "rgba(255,255,255,0.06)"}`,
+            borderRadius: "var(--radius-sm)",
+            opacity: url ? 1 : 0.7,
+          }}
+        >
+          <div
+            style={{
+              flex: 1,
+              fontFamily: "var(--font-mono)",
+              fontSize: 12,
+              color: url ? "var(--text)" : "var(--text-muted)",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {url || urlPlaceholder}
+          </div>
+          <button
+            className="btn btn-sm"
+            disabled={!url}
+            onClick={onCopy}
+            style={{ flexShrink: 0 }}
+          >
+            {copied ? "✓" : "📋"}
+          </button>
+        </div>
+      </div>
+
+      {children}
+    </div>
+  );
+}
+
+function Toggle({
+  on,
+  onChange,
+  disabled = false,
+}: {
+  on: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      role="switch"
+      aria-checked={on}
+      disabled={disabled}
+      onClick={() => onChange(!on)}
+      style={{
+        flexShrink: 0,
+        width: 40,
+        height: 22,
+        borderRadius: 999,
+        background: on ? "var(--accent)" : "rgba(255,255,255,0.12)",
+        border: "1px solid rgba(255,255,255,0.06)",
+        position: "relative",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.45 : 1,
+        transition: "background 0.18s ease",
+        padding: 0,
+      }}
+    >
+      <span
+        style={{
+          position: "absolute",
+          top: 2,
+          left: on ? 20 : 2,
+          width: 16,
+          height: 16,
+          borderRadius: 999,
+          background: "#fff",
+          transition: "left 0.18s ease",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+        }}
+      />
+    </button>
+  );
+}
+
+function StatusPill({ running, enabled }: { running: boolean; enabled: boolean }) {
+  if (running) {
+    return (
+      <span
+        style={{
+          fontSize: 10, fontWeight: 700, letterSpacing: 0.4,
+          padding: "2px 8px", borderRadius: 999,
+          background: "rgba(74,222,128,0.15)", color: "var(--accent)",
+          border: "1px solid rgba(74,222,128,0.35)",
+        }}
+      >
+        ● RUNNING
+      </span>
+    );
+  }
+  return (
+    <span
+      style={{
+        fontSize: 10, fontWeight: 700, letterSpacing: 0.4,
+        padding: "2px 8px", borderRadius: 999,
+        background: "rgba(255,255,255,0.06)", color: "var(--text-muted)",
+        border: "1px solid rgba(255,255,255,0.08)",
+      }}
+    >
+      ○ {enabled ? "STARTING…" : "OFF"}
+    </span>
   );
 }
 

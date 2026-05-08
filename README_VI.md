@@ -188,6 +188,11 @@ GameForFun đang ở giai đoạn beta. Trọng tâm hiện tại:
 - Hiển thị trạng thái chờ rõ hơn khi playit.gg đang chạy nhưng chưa có địa chỉ public.
 - Thêm chẩn đoán Tunnel cho agent, claim, địa chỉ public, trạng thái server, và port local.
 - Thêm nút kiểm tra cập nhật thủ công trong Settings.
+- Sửa kiểm tra GitHub Release để đọc API bản mới nhất ổn định hơn.
+- Thêm cài đặt Remote Control với bật/tắt, port, token truy cập, URL LAN, và URL tunnel public tuỳ chọn.
+- Thêm API remote có bảo vệ bằng token để xem trạng thái, đọc console, gửi lệnh, start, stop, và restart server qua trình duyệt.
+- Thêm truy cập remote public miễn phí qua Cloudflare Quick Tunnel, gồm tự cài `cloudflared` và tự lấy URL `trycloudflare.com`.
+- Thêm xác nhận khi đóng app nếu còn dịch vụ nền, và dừng sạch Minecraft, playit.gg, Cloudflare remote, Remote Control trước khi thoát.
 - Chỉnh lại text wizard installer/uninstaller Windows và log tiến trình.
 - Xoá helper Temurin Java không dùng tới để Rust check gọn hơn.
 

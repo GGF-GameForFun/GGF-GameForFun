@@ -17,6 +17,29 @@ export interface ServerConfig {
   backup_include_logs: boolean;
   optimized_jvm_flags: boolean;
   performance_preset: string;
+  remote_control_enabled: boolean;
+  remote_control_port: number;
+  remote_control_token: string;
+  remote_control_public_url: string;
+  cloudflare_remote_enabled: boolean;
+}
+
+export interface RemoteControlState {
+  enabled: boolean;
+  running: boolean;
+  host: string;
+  port: number;
+  token: string;
+  lan_url: string;
+  public_url: string;
+  url: string;
+}
+
+export interface CloudflareTunnelState {
+  running: boolean;
+  url: string | null;
+  pid: number | null;
+  message: string;
 }
 
 export interface McVersion {

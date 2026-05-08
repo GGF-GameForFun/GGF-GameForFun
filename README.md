@@ -188,6 +188,11 @@ Planned future ideas:
 - Added clearer waiting feedback when playit.gg is running but no public address is available yet.
 - Added Tunnel diagnostics for agent, claim, public address, server status, and local port.
 - Added a manual Settings action to check for GameForFun updates.
+- Fixed GitHub Release update checks to handle the latest-release API more reliably.
+- Added Remote Control settings with enable/disable, port, access token, LAN URL, and optional public tunnel URL.
+- Added a token-protected remote status, console, command, start, stop, and restart API for browser-based server management.
+- Added free public remote access through Cloudflare Quick Tunnel, including automatic `cloudflared` setup and `trycloudflare.com` URL capture.
+- Added close confirmation for active background services, with clean shutdown for Minecraft, playit.gg, Cloudflare remote, and Remote Control.
 - Refined Windows installer/uninstaller wizard text and progress details.
 - Removed the unused Temurin Java helper to keep Rust checks quieter.
 

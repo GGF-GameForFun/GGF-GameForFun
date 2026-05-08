@@ -11,10 +11,12 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::sync::Mutex;
 
 mod backup;
+mod cloudflare;
 mod config;
 mod debug_report;
 mod java;
 mod playit;
+mod remote;
 mod server;
 mod stats;
 
@@ -96,6 +98,10 @@ pub struct AppState {
     pub last_gametime_sample: Mutex<Option<(u64, std::time::Instant)>>,
     /// State of the in-progress chunk pre-generation, if any.
     pub pregen: Mutex<PregenState>,
+    /// LAN remote-control HTTP task, if enabled.
+    pub remote_control: Mutex<Option<tokio::task::JoinHandle<()>>>,
+    /// Free Cloudflare Quick Tunnel for public remote-control access, if running.
+    pub cloudflare_remote: Mutex<cloudflare::CloudflareTunnelState>,
 }
 
 #[derive(Default, Clone, Serialize)]
@@ -104,6 +110,15 @@ pub struct PregenState {
     pub total: u32,
     pub completed: u32,
     pub cancel_requested: bool,
+}
+
+#[derive(Default, Clone, Serialize)]
+pub struct ShutdownStatus {
+    pub server_running: bool,
+    pub playit_running: bool,
+    pub cloudflare_running: bool,
+    pub remote_control_running: bool,
+    pub any_running: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -333,8 +348,43 @@ fn get_config() -> ServerConfig {
 }
 
 #[tauri::command]
-fn save_config(cfg: ServerConfig) -> Result<(), String> {
-    config::save_config(&cfg)
+async fn save_config(app: AppHandle, mut cfg: ServerConfig) -> Result<ServerConfig, String> {
+    if cfg.remote_control_enabled && cfg.remote_control_token.trim().is_empty() {
+        cfg.remote_control_token = config::generate_remote_token();
+    }
+    config::save_config(&cfg)?;
+    remote::sync(&app).await?;
+    Ok(cfg)
+}
+
+#[tauri::command]
+fn generate_remote_token() -> String {
+    config::generate_remote_token()
+}
+
+#[tauri::command]
+async fn get_remote_control_status(app: AppHandle) -> Result<remote::RemoteControlState, String> {
+    Ok(remote::status(&app).await)
+}
+
+#[tauri::command]
+async fn restart_remote_control(app: AppHandle) -> Result<remote::RemoteControlState, String> {
+    remote::sync(&app).await
+}
+
+#[tauri::command]
+async fn start_cloudflare_remote(app: AppHandle) -> Result<cloudflare::CloudflareTunnelState, String> {
+    cloudflare::start_quick_tunnel(app).await
+}
+
+#[tauri::command]
+async fn stop_cloudflare_remote(app: AppHandle) -> Result<cloudflare::CloudflareTunnelState, String> {
+    cloudflare::stop_quick_tunnel(app).await
+}
+
+#[tauri::command]
+async fn get_cloudflare_remote_status(app: AppHandle) -> Result<cloudflare::CloudflareTunnelState, String> {
+    Ok(cloudflare::status(app).await)
 }
 
 // ── Java commands ─────────────────────────────────────────────────────────────
@@ -698,7 +748,7 @@ async fn start_server(app: AppHandle) -> Result<(), String> {
 
 /// The actual start logic, callable both from the public command and from the
 /// auto-restart task on the wait-for-child handler.
-async fn do_start_server(app: AppHandle) -> Result<(), String> {
+pub(crate) async fn do_start_server(app: AppHandle) -> Result<(), String> {
     let cfg = config::load_config();
     if !cfg.setup_complete {
         return Err("Server not set up yet".to_string());
@@ -1725,8 +1775,102 @@ async fn get_pregen_state(state: State<'_, AppState>) -> Result<PregenState, Str
     Ok(state.pregen.lock().await.clone())
 }
 
-/// Force-quit the app from the frontend after the user confirms the close
-/// dialog (or after stopping the server).
+#[tauri::command]
+async fn get_shutdown_status(app: AppHandle) -> Result<ShutdownStatus, String> {
+    let state = app.state::<AppState>();
+    let server_running = {
+        let srv = state.server.lock().await;
+        srv.status != ServerStatus::Stopped
+    };
+    let playit_running = state.playit.lock().await.running;
+    let cloudflare_running = state.cloudflare_remote.lock().await.running;
+    let remote_control_running = state.remote_control.lock().await.is_some();
+    Ok(ShutdownStatus {
+        server_running,
+        playit_running,
+        cloudflare_running,
+        remote_control_running,
+        any_running: server_running
+            || playit_running
+            || cloudflare_running
+            || remote_control_running,
+    })
+}
+
+async fn stop_server_for_shutdown(app: &AppHandle) {
+    let state = app.state::<AppState>();
+    let should_wait = {
+        let mut srv = state.server.lock().await;
+        match srv.status {
+            ServerStatus::Running | ServerStatus::Starting => {
+                srv.stop_requested = true;
+                if let Some(stdin) = &mut srv.stdin {
+                    stdin.write_all(b"stop\n").await.ok();
+                }
+                srv.status = ServerStatus::Stopping;
+                app.emit("server-status", ServerStatus::Stopping).ok();
+                true
+            }
+            ServerStatus::Stopping => true,
+            ServerStatus::Stopped => false,
+        }
+    };
+
+    if !should_wait {
+        return;
+    }
+
+    for _ in 0..30 {
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        let stopped = {
+            let srv = state.server.lock().await;
+            srv.status == ServerStatus::Stopped || srv.pid.is_none()
+        };
+        if stopped {
+            break;
+        }
+    }
+}
+
+async fn stop_playit_for_shutdown(app: &AppHandle) {
+    let state = app.state::<AppState>();
+    let mut pl = state.playit.lock().await;
+    if let Some(pid) = pl.pid {
+        #[cfg(unix)]
+        unsafe {
+            libc::kill(pid as i32, libc::SIGTERM);
+        }
+        #[cfg(windows)]
+        {
+            let mut cmd = tokio::process::Command::new("taskkill");
+            cmd.args(["/PID", &pid.to_string(), "/F"]);
+            hide_child_window(&mut cmd);
+            cmd.output().await.ok();
+        }
+    }
+    pl.running = false;
+    pl.pid = None;
+    app.emit("playit-update", pl.clone()).ok();
+}
+
+async fn stop_remote_control_for_shutdown(app: &AppHandle) {
+    let state = app.state::<AppState>();
+    let handle = state.remote_control.lock().await.take();
+    if let Some(handle) = handle {
+        handle.abort();
+    }
+}
+
+#[tauri::command]
+async fn shutdown_and_quit(app: AppHandle, window: tauri::WebviewWindow) -> Result<(), String> {
+    stop_server_for_shutdown(&app).await;
+    cloudflare::stop_quick_tunnel(app.clone()).await.ok();
+    stop_playit_for_shutdown(&app).await;
+    stop_remote_control_for_shutdown(&app).await;
+    window.destroy().map_err(|e| e.to_string())
+}
+
+/// Force-quit the app immediately.
 #[tauri::command]
 fn force_quit(window: tauri::WebviewWindow) -> Result<(), String> {
     window.destroy().map_err(|e| e.to_string())
@@ -1791,10 +1935,12 @@ fn open_update_url(url: String) -> Result<(), String> {
 #[derive(Debug, Serialize, Deserialize)]
 struct GithubRelease {
     tag_name: String,
-    name: String,
-    html_url: String,
-    body: String,
+    name: Option<String>,
+    html_url: Option<String>,
+    body: Option<String>,
+    #[serde(default)]
     prerelease: bool,
+    #[serde(default)]
     draft: bool,
 }
 
@@ -1816,15 +1962,17 @@ async fn check_for_update() -> Result<UpdateInfo, String> {
         .timeout(std::time::Duration::from_secs(8))
         .build()
         .map_err(|e| e.to_string())?;
-    let releases: Vec<GithubRelease> = client
-        .get("https://api.github.com/repos/GGF-GameForFun/GGF-GameForFun/releases")
-        .send().await.map_err(|e| format!("Network error: {}", e))?
+    let resp = client
+        .get("https://api.github.com/repos/GGF-GameForFun/GGF-GameForFun/releases/latest")
+        .send().await.map_err(|e| format!("Network error: {}", e))?;
+    if !resp.status().is_success() {
+        return Err(format!("GitHub returned {}", resp.status()));
+    }
+    let latest: GithubRelease = resp
         .json().await.map_err(|e| format!("Parse error: {}", e))?;
-
-    let latest = releases
-        .into_iter()
-        .find(|r| !r.draft && !r.prerelease)
-        .ok_or_else(|| "No releases found".to_string())?;
+    if latest.draft || latest.prerelease {
+        return Err("Latest release is not a stable release".to_string());
+    }
     let latest_version = latest.tag_name.trim_start_matches('v').to_string();
     let update_available = is_newer(&latest_version, &current);
 
@@ -1832,9 +1980,11 @@ async fn check_for_update() -> Result<UpdateInfo, String> {
         current_version: current,
         latest_version,
         update_available,
-        release_name: latest.name,
-        release_url: latest.html_url,
-        release_notes: latest.body,
+        release_name: latest.name.unwrap_or_default(),
+        release_url: latest.html_url.unwrap_or_else(|| {
+            "https://github.com/GGF-GameForFun/GGF-GameForFun/releases/latest".to_string()
+        }),
+        release_notes: latest.body.unwrap_or_default(),
     })
 }
 
@@ -1879,9 +2029,13 @@ pub fn run() {
             recent_players: Mutex::new(VecDeque::with_capacity(RECENT_PLAYERS_CAP)),
             last_gametime_sample: Mutex::new(None),
             pregen: Mutex::new(PregenState::default()),
+            remote_control: Mutex::new(None),
+            cloudflare_remote: Mutex::new(cloudflare::CloudflareTunnelState::new()),
         })
         .invoke_handler(tauri::generate_handler![
             get_config, save_config, check_java,
+            generate_remote_token, get_remote_control_status, restart_remote_control,
+            start_cloudflare_remote, stop_cloudflare_remote, get_cloudflare_remote_status,
             fetch_mc_versions, fetch_paper_versions, fetch_paper_builds,
             fetch_forge_versions, fetch_fabric_versions, fetch_neoforge_versions,
             install_server, start_server, stop_server, restart_server,
@@ -1894,7 +2048,7 @@ pub fn run() {
             create_backup, restore_backup, export_debug,
             default_backup_filename, default_debug_filename,
             pregenerate_chunks, cancel_pregenerate, get_pregen_state,
-            check_for_update, open_update_url, force_quit,
+            check_for_update, open_update_url, get_shutdown_status, shutdown_and_quit, force_quit,
         ])
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
@@ -1954,6 +2108,25 @@ pub fn run() {
                     }
                     app_handle.emit("mc-line", &msg).ok();
                     last_backup = std::time::Instant::now();
+                }
+            });
+            let remote_app = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = remote::sync(&remote_app).await {
+                    eprintln!("[GameForFun] remote control failed to start: {}", e);
+                }
+            });
+
+            // Auto-start the Cloudflare quick tunnel if both flags are on.
+            // Done after a small delay so the LAN remote service has time to bind.
+            let cf_app = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                let cfg = config::load_config();
+                if cfg.remote_control_enabled && cfg.cloudflare_remote_enabled {
+                    if let Err(e) = cloudflare::start_quick_tunnel(cf_app.clone()).await {
+                        eprintln!("[GameForFun] cloudflare auto-start failed: {}", e);
+                    }
                 }
             });
             Ok(())

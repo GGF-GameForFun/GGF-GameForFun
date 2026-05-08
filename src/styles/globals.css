@@ -179,6 +179,13 @@ select option {
   to   { opacity: 1; transform: scale(1); }
 }
 
+@keyframes toastLifecycle {
+  0%   { opacity: 0; transform: translate(18px, 10px) scale(0.98); }
+  8%   { opacity: 1; transform: translate(0, 0) scale(1); }
+  78%  { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(18px, 10px) scale(0.98); }
+}
+
 @keyframes pulseGlow {
   0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.45); }
   50%      { box-shadow: 0 0 0 6px rgba(139, 92, 246, 0); }
@@ -188,6 +195,31 @@ select option {
 .fade-in-up     { animation: fadeInUp 0.3s var(--easing); }
 .fade-in-scale  { animation: fadeInScale 0.2s var(--easing); }
 .page-transition { animation: fadeInUp 0.25s var(--easing); }
+
+.toast-stack {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 10050;
+  width: min(620px, calc(100vw - 48px));
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.45;
+  box-shadow: var(--shadow-lg);
+  animation: toastLifecycle 7s var(--easing) forwards;
+}
+
+.toast-error {
+  color: #ff8a8a;
+  background: rgba(45, 17, 27, 0.96);
+  border: 1px solid rgba(255, 100, 116, 0.92);
+}
 
 /* Rounded stat ring/pill card */
 .stat-card {

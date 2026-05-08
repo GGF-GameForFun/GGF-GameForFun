@@ -1,8 +1,15 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-fn default_true() -> bool { true }
-fn default_performance_preset() -> String { "balanced".to_string() }
+fn default_true() -> bool {
+    true
+}
+fn default_performance_preset() -> String {
+    "balanced".to_string()
+}
+fn default_remote_control_port() -> u16 {
+    47992
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -15,7 +22,9 @@ pub enum ServerType {
 }
 
 impl Default for ServerType {
-    fn default() -> Self { Self::Vanilla }
+    fn default() -> Self {
+        Self::Vanilla
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -52,6 +61,26 @@ pub struct ServerConfig {
     /// still remains user-editable.
     #[serde(default = "default_performance_preset")]
     pub performance_preset: String,
+    /// Optional LAN remote control API. Disabled by default and protected by a token.
+    #[serde(default)]
+    pub remote_control_enabled: bool,
+    /// Port for the LAN remote control server.
+    #[serde(default = "default_remote_control_port")]
+    pub remote_control_port: u16,
+    /// Bearer/query token required for remote control access.
+    #[serde(default)]
+    pub remote_control_token: String,
+    /// Optional public HTTPS/TCP tunnel URL for remote access outside the LAN.
+    #[serde(default)]
+    pub remote_control_public_url: String,
+    /// Whether the free Cloudflare quick tunnel for the remote dashboard
+    /// should auto-start on app launch (when remote_control_enabled is true).
+    #[serde(default)]
+    pub cloudflare_remote_enabled: bool,
+}
+
+pub fn generate_remote_token() -> String {
+    uuid::Uuid::new_v4().simple().to_string()
 }
 
 pub fn config_path() -> PathBuf {
