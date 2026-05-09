@@ -1,6 +1,9 @@
 // Browser-safe mock for Tauri invoke — used when running outside the desktop app
 import { ServerConfig } from "./types";
 
+// Mutable mock config — save_config updates this in place, so subsequent
+// status reads reflect the latest enabled flags. Makes browser-mode
+// preview behave like the real backend.
 const MOCK_CONFIG: ServerConfig = {
   server_path: "/Users/demo/minecraft-server",
   java_path: "/usr/bin/java",
@@ -24,9 +27,34 @@ const MOCK_CONFIG: ServerConfig = {
   cloudflare_remote_enabled: false,
 };
 
+// Cloudflare mock state — flips when start/stop is called.
+const MOCK_CLOUDFLARE = { running: false, url: null as string | null };
+
+// Build a remote-control state that respects the mutable MOCK_CONFIG.
+function buildRemoteState() {
+  const enabled = MOCK_CONFIG.remote_control_enabled;
+  const token = MOCK_CONFIG.remote_control_token || "";
+  const port = MOCK_CONFIG.remote_control_port;
+  const lan_url = enabled && token ? `http://127.0.0.1:${port}/?token=${token}` : "";
+  return {
+    enabled,
+    running: enabled && !!token,
+    host: "127.0.0.1",
+    port,
+    token,
+    lan_url,
+    public_url: MOCK_CLOUDFLARE.url || MOCK_CONFIG.remote_control_public_url || "",
+    url: lan_url,
+  };
+}
+
 const handlers: Record<string, (...args: unknown[]) => unknown> = {
   get_config: () => ({ ...MOCK_CONFIG }),
-  save_config: (args?: unknown) => (args as { cfg?: ServerConfig } | undefined)?.cfg ?? { ...MOCK_CONFIG },
+  save_config: (args?: unknown) => {
+    const cfg = (args as { cfg?: ServerConfig } | undefined)?.cfg;
+    if (cfg) Object.assign(MOCK_CONFIG, cfg);
+    return { ...MOCK_CONFIG };
+  },
   check_java: () => "/usr/bin/java",
   fetch_mc_versions: () => [
     { id: "1.21.1", release_time: "2024-08-08T12:00:00Z" },
@@ -64,44 +92,34 @@ const handlers: Record<string, (...args: unknown[]) => unknown> = {
   }),
   open_update_url: () => undefined,
   generate_remote_token: () => "demo-token-1234567890",
-  get_remote_control_status: () => ({
-    enabled: MOCK_CONFIG.remote_control_enabled,
-    running: false,
-    host: "127.0.0.1",
-    port: MOCK_CONFIG.remote_control_port,
-    token: MOCK_CONFIG.remote_control_token,
-    lan_url: "",
-    public_url: "",
-    url: "",
-  }),
-  restart_remote_control: () => ({
-    enabled: true,
-    running: true,
-    host: "127.0.0.1",
-    port: MOCK_CONFIG.remote_control_port,
-    token: MOCK_CONFIG.remote_control_token || "demo-token-1234567890",
-    lan_url: "http://127.0.0.1:47992/?token=demo-token-1234567890",
-    public_url: "",
-    url: "http://127.0.0.1:47992/?token=demo-token-1234567890",
-  }),
+  get_remote_control_status: () => buildRemoteState(),
+  restart_remote_control: () => buildRemoteState(),
   get_cloudflare_remote_status: () => ({
-    running: false,
-    url: null,
-    pid: null,
-    message: "",
+    running: MOCK_CLOUDFLARE.running,
+    url: MOCK_CLOUDFLARE.url,
+    pid: MOCK_CLOUDFLARE.running ? 1234 : null,
+    message: MOCK_CLOUDFLARE.running ? "Cloudflare tunnel ready." : "",
   }),
-  start_cloudflare_remote: () => ({
-    running: true,
-    url: "https://demo.trycloudflare.com",
-    pid: 1234,
-    message: "Cloudflare tunnel ready.",
-  }),
-  stop_cloudflare_remote: () => ({
-    running: false,
-    url: null,
-    pid: null,
-    message: "Cloudflare tunnel stopped.",
-  }),
+  start_cloudflare_remote: () => {
+    MOCK_CLOUDFLARE.running = true;
+    MOCK_CLOUDFLARE.url = "https://demo.trycloudflare.com";
+    return {
+      running: true,
+      url: MOCK_CLOUDFLARE.url,
+      pid: 1234,
+      message: "Cloudflare tunnel ready.",
+    };
+  },
+  stop_cloudflare_remote: () => {
+    MOCK_CLOUDFLARE.running = false;
+    MOCK_CLOUDFLARE.url = null;
+    return {
+      running: false,
+      url: null,
+      pid: null,
+      message: "Cloudflare tunnel stopped.",
+    };
+  },
   start_server: () => undefined,
   stop_server: () => undefined,
   restart_server: () => undefined,

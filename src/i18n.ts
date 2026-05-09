@@ -40,7 +40,7 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
     // Sidebar / navigation
     "nav.dashboard": "Dashboard",
     "nav.console": "Console",
-    "nav.tunnel": "Tunnel",
+    "nav.tunnel": "Connection",
     "nav.players": "Players",
     "nav.mods": "Mods",
     "nav.settings": "Settings",
@@ -77,6 +77,15 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
     "console.placeholder": "Server console output will appear here…",
     "console.commandPrompt": "Enter server command…",
     "console.bufferNotice": "[GameForFun] Showing latest {visible} lines. {hidden} older lines are still saved in the backend buffer.",
+
+    // Connection (replaces standalone Tunnel tab)
+    "connection.title": "Connection",
+    "connection.endpointPublic": "Public (playit.gg)",
+    "connection.endpointLan": "LAN Remote",
+    "connection.endpointCloudflare": "Cloudflare Public",
+    "connection.endpointEmpty": "Not active",
+    "connection.copyAll": "Copy all",
+    "connection.toggleLog": "Agent log",
 
     // Tunnel
     "tunnel.title": "playit.gg Tunnel",
@@ -185,6 +194,7 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
     "settings.upToDate": "GameForFun is up to date.",
     "settings.updateCheckFailed": "Update check failed: {err}",
     "settings.remoteControl": "Remote Control",
+    "settings.remoteMovedHint": "🖥 Remote Control (LAN + Cloudflare) has moved to the 🌐 Connection tab in the sidebar — quicker to access and grouped with the other connection tools.",
     "settings.remoteControlDesc": "Let another computer view status, read console output, and send server commands. Use the LAN URL at home, or add a public tunnel URL for outside access. Keep the token private.",
     "settings.remoteEnable": "Enable LAN remote control",
     "settings.remotePort": "Port",
@@ -347,7 +357,7 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
 
     "nav.dashboard": "Tổng quan",
     "nav.console": "Console",
-    "nav.tunnel": "Tunnel",
+    "nav.tunnel": "Kết nối",
     "nav.players": "Người chơi",
     "nav.mods": "Mods",
     "nav.settings": "Cài đặt",
@@ -381,6 +391,14 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
     "console.placeholder": "Log của server sẽ hiển thị ở đây…",
     "console.commandPrompt": "Nhập lệnh server…",
     "console.bufferNotice": "[GameForFun] Đang hiển thị {visible} dòng mới nhất. {hidden} dòng cũ hơn vẫn được lưu trong bộ nhớ backend.",
+
+    "connection.title": "Kết nối",
+    "connection.endpointPublic": "Public (playit.gg)",
+    "connection.endpointLan": "LAN Remote",
+    "connection.endpointCloudflare": "Cloudflare Public",
+    "connection.endpointEmpty": "Chưa hoạt động",
+    "connection.copyAll": "Copy hết",
+    "connection.toggleLog": "Log agent",
 
     "tunnel.title": "Tunnel playit.gg",
     "tunnel.active": "Tunnel đang hoạt động",
@@ -485,6 +503,7 @@ export const TRANSLATIONS: Record<Locale, Dict> = {
     "settings.upToDate": "GameForFun đang là bản mới nhất.",
     "settings.updateCheckFailed": "Kiểm tra cập nhật thất bại: {err}",
     "settings.remoteControl": "Điều khiển từ xa",
+    "settings.remoteMovedHint": "🖥 Điều khiển từ xa (LAN + Cloudflare) đã được chuyển sang tab 🌐 Kết nối ở sidebar — truy cập nhanh hơn và gom chung với các công cụ kết nối khác.",
     "settings.remoteControlDesc": "Cho phép máy khác xem trạng thái, đọc console và gửi lệnh server. Dùng URL LAN khi ở cùng mạng, hoặc thêm URL tunnel public để truy cập từ mạng khác. Hãy giữ token riêng tư.",
     "settings.remoteEnable": "Bật điều khiển từ xa qua LAN",
     "settings.remotePort": "Port",

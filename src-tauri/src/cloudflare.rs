@@ -280,6 +280,7 @@ pub async fn stop_quick_tunnel(app: AppHandle) -> Result<CloudflareTunnelState, 
     }
     tunnel.running = false;
     tunnel.pid = None;
+    tunnel.url = None;
     tunnel.message = "Cloudflare tunnel stopped.".to_string();
     app.emit("cloudflare-remote-update", tunnel.clone()).ok();
     Ok(tunnel.clone())
