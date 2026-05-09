@@ -135,49 +135,63 @@ export default function Dashboard({ config }: Props) {
         )}
       </div>
 
-      {/* Rings: RAM · CPU · Disk · TPS */}
-      <div style={{
+      {/* Rings: RAM · CPU · Disk · TPS — stagger entrance */}
+      <div className="stagger" style={{
         display: "grid",
         gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
         gap: 12,
         marginBottom: 14,
       }}>
-        <RingMeter
-          icon="🧠"
-          label={t("dashboard.ram")}
-          percent={ramPct}
-          centerText={`${ramPct.toFixed(0)}%`}
-          subText={`${stats.ram_used_mb} / ${ramMax} MB`}
-        />
-        <RingMeter
-          icon="⚡"
-          label={t("dashboard.cpu")}
-          percent={cpuPct}
-          centerText={`${cpuPct.toFixed(0)}%`}
-          subText={`${cpuPct.toFixed(1)} %`}
-        />
-        <RingMeter
-          icon="💾"
-          label={t("dashboard.disk")}
-          percent={diskPct}
-          centerText={diskPct === null ? "—" : `${diskPct.toFixed(0)}%`}
-          subText={diskUsedTotal}
-        />
-        <RingMeter
-          icon="🎯"
-          label={t("dashboard.tps")}
-          percent={tpsPct}
-          centerText={tpsCenter}
-          subText={tpsSubText}
-          invert
-        />
+        <div style={{ "--i": 0 } as React.CSSProperties}>
+          <RingMeter
+            icon="🧠"
+            label={t("dashboard.ram")}
+            percent={ramPct}
+            centerText={`${ramPct.toFixed(0)}%`}
+            subText={`${stats.ram_used_mb} / ${ramMax} MB`}
+          />
+        </div>
+        <div style={{ "--i": 1 } as React.CSSProperties}>
+          <RingMeter
+            icon="⚡"
+            label={t("dashboard.cpu")}
+            percent={cpuPct}
+            centerText={`${cpuPct.toFixed(0)}%`}
+            subText={`${cpuPct.toFixed(1)} %`}
+          />
+        </div>
+        <div style={{ "--i": 2 } as React.CSSProperties}>
+          <RingMeter
+            icon="💾"
+            label={t("dashboard.disk")}
+            percent={diskPct}
+            centerText={diskPct === null ? "—" : `${diskPct.toFixed(0)}%`}
+            subText={diskUsedTotal}
+          />
+        </div>
+        <div style={{ "--i": 3 } as React.CSSProperties}>
+          <RingMeter
+            icon="🎯"
+            label={t("dashboard.tps")}
+            percent={tpsPct}
+            centerText={tpsCenter}
+            subText={tpsSubText}
+            invert
+          />
+        </div>
       </div>
 
       {/* Secondary stats row: players + disk I/O rates */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12, marginBottom: 14 }}>
-        <Stat icon="👥" label={t("dashboard.players")} value={`${stats.players_online} / ${stats.players_max || config.max_players}`} />
-        <Stat icon="📤" label={t("dashboard.diskWrite")} value={fmtRate(stats.disk_write_kb_s, t)} />
-        <Stat icon="📥" label={t("dashboard.diskRead")}  value={fmtRate(stats.disk_read_kb_s, t)} />
+      <div className="stagger" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12, marginBottom: 14 }}>
+        <div style={{ "--i": 0 } as React.CSSProperties}>
+          <Stat icon="👥" label={t("dashboard.players")} value={`${stats.players_online} / ${stats.players_max || config.max_players}`} />
+        </div>
+        <div style={{ "--i": 1 } as React.CSSProperties}>
+          <Stat icon="📤" label={t("dashboard.diskWrite")} value={fmtRate(stats.disk_write_kb_s, t)} />
+        </div>
+        <div style={{ "--i": 2 } as React.CSSProperties}>
+          <Stat icon="📥" label={t("dashboard.diskRead")}  value={fmtRate(stats.disk_read_kb_s, t)} />
+        </div>
       </div>
 
       {/* Server / Tunnel info */}

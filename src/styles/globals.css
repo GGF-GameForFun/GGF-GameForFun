@@ -1,28 +1,50 @@
 :root {
-  --bg: #090812;
-  --surface: #141321;
-  --surface2: #1d1b31;
-  --surface3: #292642;
-  --border: #393354;
-  --accent: #8b5cf6;
-  --accent-dim: #6d4ee8;
-  --accent-2: #38bdf8;
-  --accent-3: #f43f5e;
-  --text: #f1efff;
-  --text-muted: #9a94b8;
-  --red: #f87171;
+  /* ── Liquid Glass / Vision-OS-inspired palette ─────────────────────────
+     Neutral white-on-glass aesthetic. Surfaces are translucent so they
+     pick up whatever's behind them; borders + inner shadows give depth
+     without solid color. Status colors (green/yellow/red) stay vivid for
+     instant recognition. */
+  --bg: #0b0b14;
+  /* Glass surfaces — semi-transparent so the body gradient bleeds through */
+  --surface:  rgba(255, 255, 255, 0.045);
+  --surface2: rgba(255, 255, 255, 0.075);
+  --surface3: rgba(255, 255, 255, 0.115);
+  --border:        rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  /* Accent is now a subtle white-pill style — primary action buttons + active
+     nav use this. The previous purple was too dominant for a minimal UI. */
+  --accent:        #ffffff;
+  --accent-fg:     #0b0b14;
+  --accent-dim:    rgba(255, 255, 255, 0.86);
+  --accent-pill:   rgba(255, 255, 255, 0.14);
+  --accent-pill-strong: rgba(255, 255, 255, 0.22);
+  --accent-glow:   rgba(255, 255, 255, 0.10);
+  /* A soft secondary used very sparingly for highlights / tunnel addresses */
+  --accent-2: #93c5fd;
+  --accent-3: #fb7185;
+  --text: #ffffff;
+  --text-muted: rgba(255, 255, 255, 0.62);
+  --text-faint: rgba(255, 255, 255, 0.40);
+  --red: #fb7185;
   --yellow: #fbbf24;
   --green: #4ade80;
-  --blue: #38bdf8;
-  --radius: 12px;
-  --radius-sm: 8px;
-  --radius-lg: 16px;
-  --sidebar-w: 210px;
-  --topbar-h: 48px;
+  --blue: #93c5fd;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --radius-lg: 20px;
+  --sidebar-w: 220px;
+  --topbar-h: 50px;
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.35);
-  --shadow-md: 0 8px 26px rgba(6,5,18,0.42);
-  --shadow-lg: 0 18px 56px rgba(6,5,18,0.58);
+  --shadow-md: 0 10px 30px rgba(0,0,0,0.40);
+  --shadow-lg: 0 24px 64px rgba(0,0,0,0.55);
   --easing: cubic-bezier(0.4, 0, 0.2, 1);
+  /* Spring-feel easing curves — `--spring` overshoots slightly then settles
+     (good for pop-in animations); `--spring-soft` is a gentler version for
+     hover/state transitions. `--spring-out` decelerates softly without
+     overshoot — good for things you don't want to "wobble". */
+  --spring:      cubic-bezier(0.34, 1.56, 0.64, 1);
+  --spring-soft: cubic-bezier(0.22, 1.20, 0.60, 1);
+  --spring-out:  cubic-bezier(0.16, 1.00, 0.30, 1);
 }
 
 * {
@@ -33,9 +55,13 @@
 
 html, body, #root {
   height: 100%;
+  /* Soft warm-cool ambient gradient — mimics the blurred-wallpaper feel
+     visible behind glass panels in Vision-OS-style UIs. Two muted, neutral
+     hue stops anchor the corners; everything else stays a deep base. */
   background:
-    radial-gradient(circle at 10% 0%, rgba(139, 92, 246, 0.18), transparent 28%),
-    radial-gradient(circle at 92% 10%, rgba(56, 189, 248, 0.12), transparent 26%),
+    radial-gradient(circle at 12% 8%,  rgba(147, 197, 253, 0.10), transparent 32%),
+    radial-gradient(circle at 88% 12%, rgba(251, 191, 36, 0.05),  transparent 30%),
+    radial-gradient(circle at 50% 110%, rgba(167, 139, 250, 0.05), transparent 50%),
     var(--bg);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
@@ -85,6 +111,11 @@ select option {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
+/* ── Button styles — Liquid-Glass / Vision-OS feel ───────────────────────
+   Default `.btn` is a translucent pill that picks up the surface behind it.
+   `.btn-primary` is a solid white pill with dark text — high contrast for
+   the single most important action on each surface. `.btn-danger` stays
+   outlined-red for clear destructive intent. */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -92,35 +123,45 @@ select option {
   padding: 8px 16px;
   border-radius: 999px;
   font-weight: 500;
-  background: var(--surface3);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--text);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
 }
 .btn:hover:not(:disabled) {
-  background: var(--surface2);
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.20);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: #080711;
-  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: rgba(255, 255, 255, 0.30);
   font-weight: 600;
+  backdrop-filter: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--accent-dim), #0ea5e9);
-  border-color: var(--accent-2);
-  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.38);
+  background: var(--accent-dim);
+  border-color: rgba(255, 255, 255, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 6px 22px rgba(255, 255, 255, 0.15);
   transform: translateY(-1px);
 }
 
 .btn-danger {
-  background: transparent;
+  background: rgba(251, 113, 133, 0.10);
   color: var(--red);
+  border-color: rgba(251, 113, 133, 0.45);
+}
+.btn-danger:hover:not(:disabled) {
+  background: var(--red);
+  color: #fff;
   border-color: var(--red);
 }
-.btn-danger:hover:not(:disabled) { background: var(--red); color: #fff; }
 
 .btn-sm {
   padding: 5px 10px;
@@ -128,17 +169,26 @@ select option {
 }
 
 .card {
-  background: linear-gradient(180deg, rgba(255,255,255,0.035), transparent 38%), var(--surface);
-  border: 1px solid var(--border);
+  /* Frosted glass card — translucent with a faint top-edge highlight that
+     mimics the way light catches the rim of real glass. */
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01) 60%),
+    rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius);
   padding: 16px;
-  transition: border-color 0.2s var(--easing), box-shadow 0.2s var(--easing),
-              transform 0.2s var(--easing);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 6px 22px rgba(0, 0, 0, 0.30);
+  transition:
+    border-color 0.32s var(--spring-soft),
+    box-shadow 0.32s var(--spring-soft),
+    transform 0.32s var(--spring-soft);
 }
-.card-hover:hover {
-  border-color: rgba(139, 92, 246, 0.45);
-  box-shadow: var(--shadow-md);
-}
+/* (legacy .card-hover:hover rule was here — superseded by spring-friendly
+   version below in the animation block) */
 
 .label {
   font-size: 11px;
@@ -170,13 +220,33 @@ select option {
 }
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fadeInScale {
-  from { opacity: 0; transform: scale(0.95); }
+  from { opacity: 0; transform: scale(0.94); }
   to   { opacity: 1; transform: scale(1); }
+}
+
+/* Springy entrance — slight overshoot above target then settles back.
+   Used for cards/modals that should feel "alive" rather than just appear. */
+@keyframes springInUp {
+  0%   { opacity: 0; transform: translateY(16px) scale(0.97); }
+  60%  { opacity: 1; transform: translateY(-3px) scale(1.012); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes springInScale {
+  0%   { opacity: 0; transform: scale(0.86); }
+  55%  { opacity: 1; transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes springSlideRight {
+  0%   { opacity: 0; transform: translateX(-12px); }
+  60%  { opacity: 1; transform: translateX(2px); }
+  100% { opacity: 1; transform: translateX(0); }
 }
 
 @keyframes toastLifecycle {
@@ -187,14 +257,87 @@ select option {
 }
 
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.45); }
-  50%      { box-shadow: 0 0 0 6px rgba(139, 92, 246, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.30); }
+  50%      { box-shadow: 0 0 0 6px rgba(255, 255, 255, 0); }
 }
 
-.fade-in        { animation: fadeIn 0.25s var(--easing); }
-.fade-in-up     { animation: fadeInUp 0.3s var(--easing); }
-.fade-in-scale  { animation: fadeInScale 0.2s var(--easing); }
-.page-transition { animation: fadeInUp 0.25s var(--easing); }
+/* iOS 26 Liquid-Glass effect — translucent background with blur,
+   saturation boost and subtle gradient border for depth. The illusion
+   only works when content is visible behind the element, so glass
+   surfaces should overlap or be near scrollable content. */
+.glass {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.04),
+    rgba(139, 92, 246, 0.025) 50%,
+    rgba(255, 255, 255, 0.02)
+  ),
+  rgba(20, 19, 33, 0.55);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 8px 32px rgba(0, 0, 0, 0.30);
+}
+.glass-strong {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.06),
+    rgba(139, 92, 246, 0.04)
+  ),
+  rgba(20, 19, 33, 0.72);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 12px 48px rgba(0, 0, 0, 0.45);
+}
+
+.fade-in        { animation: fadeIn 0.25s var(--spring-out); }
+.fade-in-up     { animation: springInUp 0.55s var(--spring) both; }
+.fade-in-scale  { animation: springInScale 0.45s var(--spring) both; }
+.page-transition { animation: springInUp 0.45s var(--spring-out) both; }
+
+/* Stagger children: assign --i (0-indexed) inline via style and the
+   children's animations get progressively delayed for a wave entrance. */
+.stagger > * {
+  animation: springInUp 0.55s var(--spring) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+/* Card hover lift with spring snap-back. Cards using `.card-hover` get a
+   small lift on hover that springs into position rather than easing. */
+.card-hover {
+  transition: transform 0.32s var(--spring-soft),
+              box-shadow 0.32s var(--spring-soft),
+              border-color 0.25s var(--easing);
+  will-change: transform;
+}
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Buttons feel springy on press. */
+button {
+  transition: transform 0.18s var(--spring-soft),
+              background 0.15s var(--easing),
+              color 0.15s var(--easing),
+              border-color 0.15s var(--easing),
+              opacity 0.15s var(--easing);
+}
+button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+/* Pulse animation for the green RUNNING dot. */
+@keyframes runningPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.55); }
+  50%      { box-shadow: 0 0 0 6px rgba(74, 222, 128, 0); }
+}
+.status-dot.running { animation: runningPulse 1.8s ease-out infinite; }
 
 .toast-stack {
   position: fixed;
@@ -270,11 +413,10 @@ select option {
   gap: 8px;
   padding: 0 20px;
   height: var(--topbar-h);
-  background: rgba(20, 19, 33, 0.88);
-  border-bottom: 1px solid var(--border);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  /* Background comes from .glass class when applied; fallback otherwise */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   flex-shrink: 0;
+  z-index: 1;
 }
 
 /* Modal backdrop */
@@ -292,11 +434,15 @@ select option {
   animation: fadeIn 0.2s var(--easing);
 }
 .modal {
-  background: linear-gradient(180deg, rgba(139,92,246,0.08), transparent 38%), var(--surface);
-  border: 1px solid var(--border);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.01) 50%),
+    rgba(20, 19, 33, 0.85);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  animation: fadeInScale 0.25s var(--easing);
+  animation: springInScale 0.4s var(--spring);
   position: relative;
 }
 
@@ -314,19 +460,35 @@ select option {
   text-align: left;
   font-weight: 500;
   font-size: 13px;
+  transition:
+    background 0.35s var(--spring-soft),
+    color 0.25s var(--easing),
+    border-color 0.35s var(--spring-soft),
+    transform 0.18s var(--spring-soft),
+    box-shadow 0.35s var(--spring-soft);
 }
 .nav-btn:hover:not(.active) {
-  background: var(--surface2);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text);
 }
 .nav-btn.active {
-  background: linear-gradient(135deg, rgba(139,92,246,0.22), rgba(56,189,248,0.08));
-  color: var(--accent);
-  border-color: rgba(139, 92, 246, 0.38);
+  /* White-pill active state — Vision-OS / Apple Music style. The pill
+     reads as a "selected" affordance without any colored accent. */
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.22);
   font-weight: 600;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    0 2px 14px rgba(0, 0, 0, 0.25);
 }
+.nav-btn:active:not(:disabled) { transform: scale(0.97); }
 .nav-btn .nav-icon {
   font-size: 15px;
   width: 18px;
   text-align: center;
+  transition: transform 0.35s var(--spring);
+}
+.nav-btn.active .nav-icon {
+  transform: scale(1.10);
 }
